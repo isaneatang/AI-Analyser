@@ -4,7 +4,7 @@
  * Secret API keys (Moralis, CoinGecko, Gemini) are only used here.
  *
  * In development, Vite runs on port 5173 and this server on port 3001.
- * Vite proxies /api requests to this server.
+ * On Vercel, this file is imported as a serverless function.
  */
 
 import 'dotenv/config';
@@ -17,13 +17,12 @@ import registryRouter from './api/registry.js';
 import { BOT_CHAIN_ID, BOT_CHAIN_NAME } from './api/config/network.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -46,8 +45,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`[server] API running on http://localhost:${PORT}`);
-  console.log(`[server] ${BOT_CHAIN_NAME} (chain ${BOT_CHAIN_ID})`);
-});
+// Export for Vercel serverless (imported by api/index.js)
+export default app;
+
+// Start server in development (not on Vercel)
+const PORT = process.env.PORT || 3001;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[server] API running on http://localhost:${PORT}`);
+    console.log(`[server] ${BOT_CHAIN_NAME} (chain ${BOT_CHAIN_ID})`);
+  });
+}
