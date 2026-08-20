@@ -10,11 +10,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import investigateRouter from './api/investigate.js';
-import chatRouter from './api/chat.js';
-import crosschainRouter from './api/crosschain.js';
-import registryRouter from './api/registry.js';
-import { BOT_CHAIN_ID, BOT_CHAIN_NAME } from './api/config/network.js';
+import investigateRouter from './server/investigate.js';
+import chatRouter from './server/chat.js';
+import crosschainRouter from './server/crosschain.js';
+import registryRouter from './server/registry.js';
+import { BOT_CHAIN_ID, BOT_CHAIN_NAME } from './server/config/network.js';
 
 const app = express();
 

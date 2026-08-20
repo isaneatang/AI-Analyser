@@ -8,9 +8,9 @@
  * - direct blockchain verification
  */
 
-import { BOT_CHAIN } from '../../src/config/botChain.js';
+import { BOT_RPC_URL } from '../config/network.js';
 
-const RPC_URL = process.env.BOT_RPC_URL || BOT_CHAIN.rpcUrl;
+const RPC_URL = BOT_RPC_URL;
 
 let requestId = 1;
 
