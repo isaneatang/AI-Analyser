@@ -1,0 +1,713 @@
+
+
+1. Project blueprint
+
+ai-wallet-investigator/
+│
+├── src/
+│   │
+│   ├── components/
+│   │   ├── Navbar.jsx
+│   │   ├── WalletConnect.jsx
+│   │   ├── WalletSearch.jsx
+│   │   ├── NetworkStatus.jsx
+│   │   ├── InvestigationLoader.jsx
+│   │   ├── WalletOverview.jsx
+│   │   ├── AssetPanel.jsx
+│   │   ├── ActivityTimeline.jsx
+│   │   ├── TransactionList.jsx
+│   │   ├── TransactionDetail.jsx
+│   │   ├── AIProfile.jsx
+│   │   ├── AttentionSignals.jsx
+│   │   ├── Counterparties.jsx
+│   │   ├── FundFlow.jsx
+│   │   ├── ActivityScore.jsx
+│   │   ├── AskWallet.jsx
+│   │   ├── EvidenceCard.jsx
+│   │   └── EmptyState.jsx
+│   │
+│   ├── pages/
+│   │   ├── Home.jsx
+│   │   └── Investigate.jsx
+│   │
+│   ├── context/
+│   │   ├── WalletContext.jsx
+│   │   └── InvestigationContext.jsx
+│   │
+│   ├── services/
+│   │   ├── moralis.js
+│   │   ├── rpc.js
+│   │   ├── coingecko.js
+│   │   └── wallet.js
+│   │
+│   ├── ai/
+│   │   ├── gemini.js
+│   │   ├── investigator.js
+│   │   ├── chat.js
+│   │   └── prompts.js
+│   │
+│   ├── analysis/
+│   │   ├── transactionClassifier.js
+│   │   ├── activityScore.js
+│   │   ├── counterparties.js
+│   │   └── attentionSignals.js
+│   │
+│   ├── utils/
+│   │   ├── address.js
+│   │   ├── format.js
+│   │   └── storage.js
+│   │
+│   ├── config/
+│   │   └── botChain.js
+│   │
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+│
+├── api/
+│   ├── investigate.js
+│   ├── transaction.js
+│   └── chat.js
+│
+├── contracts/
+│   └── InvestigationRegistry.sol
+│
+├── feedback.txt
+├── steps.txt
+├── README.md
+├── .env.example
+├── .gitignore
+├── package.json
+└── vite.config.js
+
+That's around 30 files, but most are small and have one obvious responsibility.
+
+I actually prefer this over trying to get it down to 10 files.
+
+
+---
+
+2. What every important file does
+
+This is the part I would put directly into the coding prompt.
+
+src/config/botChain.js
+
+Purpose: The single source of truth for BOT Chain configuration.
+
+Contains:
+
+chain ID 968
+
+chain name
+
+RPC URL
+
+native currency
+
+block explorer configuration
+
+wallet_addEthereumChain parameters
+
+
+Nothing else should define BOT Chain configuration.
+
+
+---
+
+src/context/WalletContext.jsx
+
+Purpose: Controls wallet connection state.
+
+Responsible for:
+
+connected address
+
+connected chain
+
+connection status
+
+network mismatch
+
+requesting BOT Chain
+
+disconnect state
+
+
+It should not contain Moralis calls or AI logic.
+
+
+---
+
+src/services/wallet.js
+
+Purpose: Handles wallet/network operations.
+
+Functions include:
+
+isBotChain()
+
+switchToBotChain()
+
+addBotChain()
+
+ensureBotChain()
+
+
+Network flow:
+
+Wallet connected
+      ↓
+Is chain 968?
+   /       \
+ YES       NO
+  ↓         ↓
+Continue   Try switch
+             ↓
+       Switch successful?
+          /       \
+        YES       NO
+         ↓         ↓
+      Continue   Try add
+                   ↓
+             Add successful?
+
+If the wallet rejects the request, show a normal user-facing message.
+
+Do not repeatedly prompt the wallet.
+
+
+---
+
+src/components/WalletConnect.jsx
+
+Purpose: The visible wallet connection button.
+
+It displays:
+
+Connect Wallet
+
+Connected address
+
+Wrong Network
+
+Switching Network
+
+Connection error
+
+
+It calls the wallet context rather than implementing wallet logic itself.
+
+
+---
+
+src/components/WalletSearch.jsx
+
+Purpose: Allows users to investigate an address without connecting their wallet.
+
+Responsible for:
+
+input
+
+validation
+
+submit
+
+invalid-address error
+
+
+It does not fetch blockchain data directly.
+
+
+---
+
+src/services/moralis.js
+
+Purpose: All Moralis API communication.
+
+Functions such as:
+
+getWalletBalance()
+getTokenBalances()
+getWalletTransactions()
+getTokenTransfers()
+getNFTs()
+getWalletHistory()
+
+No UI code.
+
+No Gemini code.
+
+
+---
+
+src/services/rpc.js
+
+Purpose: Direct BOT Chain RPC communication.
+
+Used when:
+
+Moralis doesn't provide something
+
+We need specific contract information
+
+We need transaction receipt/log information
+
+We need a direct blockchain fallback
+
+
+
+---
+
+src/services/coingecko.js
+
+Purpose: Market-data retrieval.
+
+Responsible for:
+
+token price
+
+market data
+
+24h changes
+
+USD valuation
+
+
+It should gracefully handle unavailable token prices.
+
+
+---
+
+3. Analysis layer
+
+This is important because AI shouldn't calculate everything.
+
+transactionClassifier.js
+
+Converts raw transactions into categories:
+
+TRANSFER
+TOKEN_TRANSFER
+CONTRACT_INTERACTION
+SWAP
+NFT
+UNKNOWN
+
+Where classification cannot be confidently determined:
+
+UNKNOWN
+
+Don't let AI invent classifications.
+
+
+---
+
+activityScore.js
+
+Calculates the wallet's numerical activity score.
+
+For example:
+
+transaction frequency
++
+active days
++
+contract interactions
++
+counterparties
++
+recent activity
+=
+activity score
+
+The formula lives here.
+
+
+---
+
+counterparties.js
+
+Extracts:
+
+addresses interacted with
+
+interaction count
+
+first interaction
+
+last interaction
+
+incoming/outgoing relationships
+
+
+
+---
+
+attentionSignals.js
+
+Looks for measurable unusual behavior.
+
+Examples:
+
+large transfer
+activity spike
+new contract
+large approval
+rapid movement
+failed transaction spike
+
+This produces structured signals for the AI and UI.
+
+
+---
+
+4. AI layer
+
+ai/gemini.js
+
+Only responsible for communicating with Gemini through the backend.
+
+Don't put wallet analysis here.
+
+
+---
+
+ai/investigator.js
+
+Takes the normalized investigation data and prepares the AI investigation request.
+
+For example:
+
+wallet metrics
++
+transaction summary
++
+counterparties
++
+attention signals
++
+asset information
+        ↓
+investigation context
+        ↓
+Gemini
+
+
+---
+
+ai/chat.js
+
+Handles the Ask the Wallet feature.
+
+It determines what information is relevant to the question before asking Gemini.
+
+
+---
+
+ai/prompts.js
+
+Contains the actual system prompts.
+
+This is useful because you can later inspect exactly what we're telling Gemini.
+
+It should contain separate prompts for:
+
+wallet analysis
+
+transaction explanation
+
+chat
+
+attention signal explanation
+
+
+
+---
+
+5. Backend API
+
+This is where your secret keys stay.
+
+api/investigate.js
+
+Receives:
+
+wallet address
+
+Then:
+
+Moralis
+RPC
+CoinGecko
+      ↓
+Normalize
+      ↓
+Analyze
+      ↓
+Return structured investigation data
+
+The frontend never receives your Moralis/Gemini secret keys.
+
+
+---
+
+api/transaction.js
+
+Receives:
+
+wallet/transaction hash
+
+Retrieves the transaction data and optionally generates its AI explanation.
+
+
+---
+
+api/chat.js
+
+Receives:
+
+wallet
+question
+investigation context
+
+Retrieves relevant information and calls Gemini.
+
+
+---
+
+6. Pages
+
+pages/Home.jsx
+
+The landing/investigation screen.
+
+Contains:
+
+branding
+
+BOT Chain status
+
+wallet connect
+
+address search
+
+recent investigations
+
+short explanation of the product
+
+
+
+---
+
+pages/Investigate.jsx
+
+The main investigation dashboard.
+
+Layout:
+
+┌──────────────────────────────────────┐
+│ NAVBAR                               │
+├──────────────────────────────────────┤
+│ TARGET WALLET                        │
+│ 0x68d7...                            │
+├──────────────────────────────────────┤
+│ OVERVIEW                             │
+├──────────────────────────────────────┤
+│ AI PROFILE                           │
+├─────────────────┬────────────────────┤
+│ ACTIVITY        │ ACTIVITY SCORE     │
+├─────────────────┼────────────────────┤
+│ COUNTERPARTIES  │ ATTENTION SIGNALS  │
+├─────────────────┴────────────────────┤
+│ ACTIVITY TIMELINE                    │
+├──────────────────────────────────────┤
+│ TRANSACTIONS                         │
+├──────────────────────────────────────┤
+│ FUND FLOW                            │
+├──────────────────────────────────────┤
+│ ASK THE WALLET                       │
+└──────────────────────────────────────┘
+
+
+---
+
+7. Context
+
+InvestigationContext.jsx
+
+This keeps the investigation state together.
+
+For example:
+
+wallet
+network
+assets
+transactions
+counterparties
+metrics
+attentionSignals
+aiProfile
+loadingState
+error
+
+That prevents every component from independently fetching the same information.
+
+
+---
+
+8. BOT Chain network switching
+
+This deserves a very explicit requirement in the prompt.
+
+When a user connects:
+
+Connected
+   ↓
+Check chain
+   ↓
+BOT Chain 968?
+   │
+   ├── YES → continue
+   │
+   └── NO
+        ↓
+wallet_switchEthereumChain
+        ↓
+   success?
+    │    │
+   YES   NO
+    │     │
+ continue  ↓
+       wallet_addEthereumChain
+              ↓
+          success?
+
+Use the standard EIP-3326/EIP-3085 wallet methods where supported.
+
+The app should handle wallets that don't support automatic switching gracefully.
+
+For mobile wallets, don't assume the request will always work.
+
+The UI should say something like:
+
+> BOT Chain Testnet is required. Please approve the network request in your wallet.
+
+
+
+If the wallet refuses:
+
+> Network switch was not approved. You can switch to BOT Chain Testnet manually and try again.
+
+
+
+No endless retry loops.
+
+
+---
+
+9. The visual structure
+
+I'd also explicitly tell the AI to build the interface around these visual layers:
+
+BACKGROUND
+│
+├── subtle grid
+├── very subtle scanline/noise
+└── dark green ambient glow
+     
+NAVIGATION
+│
+├── logo
+├── BOT Chain status
+└── wallet button
+
+INVESTIGATION TERMINAL
+│
+├── target input
+├── network
+└── investigate button
+
+RESULTS
+│
+├── wallet identity
+├── metrics
+├── AI profile
+├── activity
+├── counterparties
+├── attention
+├── transactions
+└── chat
+
+The effects should be subtle enough that the data remains easy to read.
+
+
+---
+
+10. One major change I'd make to the coding process
+
+Don't give the agent the entire project and tell it:
+
+> "Build everything."
+
+
+
+Instead, give it the full master prompt, then tell it to work through the blueprint in stages.
+
+That means you'll be able to look at the actual application after each stage.
+
+Stage 1
+
+Visual shell + project structure.
+
+Stage 2
+
+Reown + BOT Chain network switching.
+
+Stage 3
+
+Moralis + RPC.
+
+Stage 4
+
+Investigation dashboard.
+
+Stage 5
+
+Analysis engine.
+
+Stage 6
+
+Gemini.
+
+Stage 7
+
+Ask the Wallet.
+
+Stage 8
+
+Attention signals + evidence.
+
+Stage 9
+
+BOT Chain report registry.
+
+Stage 10
+
+Mobile polish + deployment.
+
+After every stage, the agent updates:
+
+feedback.txt
+steps.txt
+README.md
+
+That gives you a running record of what the AI actually changed, which is particularly useful when you are debugging.
+
+And I would make one more rule explicit in the final prompt:
+
+> Never modify 10 unrelated files to implement one small feature. Keep changes localized and explain every changed file in feedback.txt.
+
+
+
+That will make working with the AI coding agent considerably easier for you.

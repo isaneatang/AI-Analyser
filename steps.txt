@@ -1,0 +1,116 @@
+AI WALLET INVESTIGATOR - Current Steps
+========================================
+
+STATUS: Testnet. Everything is configured and deployed.
+
+==================================================
+WHAT TO DO NOW
+==================================================
+
+1. RUN THE APP
+   npm run dev
+   Opens at http://localhost:5173
+
+2. TEST INVESTIGATION
+   - Paste a BOT Chain wallet address on the home page
+   - Click INVESTIGATE
+   - Wait for the loader to finish
+   - Check that all sections load: Overview, Activity Score,
+     AI Analysis, Token Holdings, Counterparties, Fund Flow,
+     Transactions
+
+3. TEST WALLET CONNECT
+   - Click Connect Wallet (top right)
+   - Connect MetaMask
+   - Confirm it detects BOT Chain Testnet
+   - If not on testnet, it should prompt you to switch
+
+4. TEST COPY ADDRESS
+   - On the investigate page, click the full wallet address
+   - It should say COPIED for 2 seconds
+
+5. TEST SECTION NAVIGATION
+   - On the investigate page, use the section nav bar at the top
+   - Click different sections (OVERVIEW, SCORE, AI ANALYSIS, etc.)
+   - It should scroll smoothly to each section
+   - The active section should highlight as you scroll
+
+6. TEST AI FEATURES
+   - AI Analysis should generate a report (may take 30-60s)
+   - Ask the Wallet: try the suggested questions or type your own
+   - Expand a transaction and click EXPLAIN TRANSACTION
+
+7. TEST REPORT DOWNLOAD
+   - Click DOWNLOAD REPORT on the investigate page
+   - A .md file should download with the full report
+
+8. TEST ANCHOR + MINT (requires deployed registry)
+   - Click ANCHOR REPORT ON-CHAIN
+   - Click MINT SNAPSHOT
+   - After minting, verify the result card shows timestamp,
+     hash, transaction, and wallet details
+   - Click VIEW ON TIMESTAMP PAGE to go to /snapshot/<wallet>
+
+9. TEST TIMESTAMP PAGE
+   - Go to SNAPSHOTS in the navbar
+   - Enter a wallet address and click Load
+   - Use the date picker to find a snapshot at a specific time
+
+10. TEST SERVER HEALTH
+    - On the home page, check the SERVER ONLINE indicator
+    - It should show the chain name and chain ID
+
+==================================================
+IF SOMETHING DOES NOT WORK
+==================================================
+
+- Check the browser console (F12) for errors
+- Check the terminal where npm run dev is running
+- Make sure .env has all required API keys
+- Make sure the server is running (port 3001)
+- If investigation fails, check MORALIS_API_KEY and GEMINI_API_KEY
+- If wallet won't connect, check VITE_REOWN_PROJECT_ID
+- If mint/anchor fails, check REGISTRY_CONTRACT and BOT_PRIVATE_KEY
+
+==================================================
+WHEN READY FOR MAINNET
+==================================================
+
+1. Get mainnet values from the BOT Chain team:
+   - Mainnet Chain ID
+   - Mainnet RPC URL
+   - Mainnet Block Explorer URL (if available)
+
+2. Update src/config/botChain.js:
+   - Change ACTIVE_NETWORK_KEY to 'mainnet'
+   - Fill in real values in BOT_NETWORKS.mainnet
+
+3. Update .env:
+   - BOT_NETWORK=mainnet
+   - BOT_RPC_URL=<real mainnet rpc url>
+   - BOT_PRIVATE_KEY=<funded mainnet key>
+   - REGISTRY_CONTRACT=<new mainnet contract>
+
+4. Deploy registry to mainnet:
+   npm run deploy:registry
+
+5. Update Vercel environment variables and redeploy
+
+6. Verify everything works on mainnet:
+   - Wallet connection
+   - Investigation with real data
+   - Registry anchor + mint (real gas)
+   - Snapshot page
+
+==================================================
+ENVIRONMENT VARIABLES (reference)
+==================================================
+
+  VITE_REOWN_PROJECT_ID   wallet connection        (client)
+  BOT_NETWORK             testnet | mainnet        (server)
+  BOT_RPC_URL             RPC URL                  (server)
+  MORALIS_API_KEY         blockchain data          (server)
+  COINGECKO_API_KEY       market data              (server)
+  GEMINI_API_KEY          AI analysis              (server)
+  REGISTRY_CONTRACT       contract address         (server)
+  BOT_PRIVATE_KEY         funded key for gas       (server)

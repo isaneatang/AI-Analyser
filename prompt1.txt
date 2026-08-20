@@ -1,0 +1,1394 @@
+AI WALLET INVESTIGATOR
+
+BOT Chain AI dApp - Master Development Prompt
+
+You are the lead developer building a production-quality MVP called AI Wallet Investigator.
+
+The application is a BOT Chain-native AI blockchain investigation dApp. Its primary purpose is to let users investigate a BOT Chain wallet, understand its activity, and ask an AI questions about the wallet using real blockchain data.
+
+The user building this project is not an experienced programmer. Code must therefore be organized, readable, documented, and easy to debug.
+
+Do not create an unnecessarily complicated architecture.
+
+Do not create giant files simply to reduce the number of files.
+
+Do not create excessive abstractions or unnecessary dependencies.
+
+Prefer small, focused files with clear responsibilities.
+
+---
+
+1. PRIMARY GOAL
+
+Build a web application where a user can:
+
+1. Connect a wallet.
+2. Enter a BOT Chain wallet address manually.
+3. Investigate the address.
+4. Retrieve real blockchain activity.
+5. Analyze wallet behavior.
+6. View assets and transactions.
+7. Identify important counterparties.
+8. Detect potentially unusual activity.
+9. Ask an AI questions about the wallet.
+10. Inspect the blockchain evidence behind AI answers.
+11. Eventually anchor an investigation report on BOT Chain.
+
+The application must feel like a blockchain investigation terminal, not a generic crypto portfolio tracker and not a generic AI chatbot.
+
+---
+
+2. BOT CHAIN IS THE PRIMARY NETWORK
+
+This is a BOT Chain project.
+
+Do not treat BOT Chain as an afterthought.
+
+The primary network for V1 is:
+
+Network:
+BOT Chain Testnet
+
+Chain ID:
+968
+
+RPC:
+https://rpc.bohr.life
+
+The application should be designed around BOT Chain first.
+
+Multi-chain support may be added later, but do not allow multi-chain complexity to interfere with the BOT Chain MVP.
+
+Create a centralized chain configuration file so network details are not scattered throughout the application.
+
+Never hardcode network configuration in multiple components.
+
+---
+
+3. TECHNOLOGY STACK
+
+Use:
+
+- React
+- Vite
+- JavaScript
+- CSS or a lightweight styling solution
+- Wagmi
+- Viem
+- Reown AppKit
+- Node.js/server-side API routes
+- Moralis EVM API
+- CoinGecko API
+- Gemini API
+
+Use the existing current stable package versions available at installation time.
+
+Do not install libraries simply because they are popular.
+
+Every dependency should have a reason.
+
+The frontend must never contain secret API keys.
+
+---
+
+4. WALLET CONNECTION
+
+Use Reown AppKit for wallet connection.
+
+The application must support EIP-1193 compatible wallets where possible.
+
+The wallet connection system must:
+
+- Detect connection state.
+- Detect the connected address.
+- Detect the connected chain.
+- Detect whether the user is on BOT Chain Testnet.
+- Request/suggest the correct network when appropriate.
+- Clearly display network mismatch.
+- Provide a way to reconnect.
+- Handle wallet rejection gracefully.
+- Handle mobile wallet situations gracefully.
+- Never leave the interface permanently stuck on "connecting."
+
+Do not assume a wallet connection succeeded just because a button was clicked.
+
+Always use actual connection state.
+
+---
+
+5. WALLET INVESTIGATION INPUT
+
+The home page should contain a prominent investigation input.
+
+Users should be able to:
+
+Option A
+
+Connect their wallet.
+
+Option B
+
+Paste a wallet address.
+
+Validate the address before investigation.
+
+Display useful errors such as:
+
+"Invalid EVM address."
+
+Do not expose raw technical errors directly to normal users.
+
+Provide a concise user-facing error and log the detailed error for debugging.
+
+---
+
+6. INVESTIGATION FLOW
+
+When the user starts an investigation, create a clear progressive loading experience.
+
+Do NOT use one generic spinner for the entire investigation.
+
+Show stages such as:
+
+INITIALIZING
+
+CONNECTING TO BOT CHAIN
+
+FETCHING WALLET DATA
+
+LOADING TRANSACTIONS
+
+ANALYZING CONTRACT ACTIVITY
+
+MAPPING COUNTERPARTIES
+
+CALCULATING WALLET METRICS
+
+GENERATING AI ANALYSIS
+
+INVESTIGATION READY
+
+These stages should update naturally as work progresses.
+
+Do not fake progress.
+
+If a stage has actually completed, update it.
+
+If an API fails, show the correct stage and error.
+
+---
+
+7. WALLET OVERVIEW
+
+Create a wallet overview containing:
+
+- Full address
+- Shortened address
+- Network
+- First known activity
+- Last activity
+- Wallet age
+- Native BOT balance
+- Estimated native asset value where market data is available
+- Token count
+- NFT count where supported
+- Transaction count
+- Contract interaction count
+- Successful transactions
+- Failed transactions
+- Active activity period
+
+Use real data.
+
+Do not fabricate values.
+
+If data is unavailable, explicitly display:
+
+"Data unavailable"
+
+rather than inventing information.
+
+---
+
+8. TOKEN HOLDINGS
+
+Display token holdings.
+
+For each token where data is available:
+
+- Symbol
+- Name
+- Balance
+- Contract address
+- Estimated USD value
+- Price
+- 24h change where available
+
+Use CoinGecko for market data where appropriate.
+
+Do not assume every BOT Chain token will exist in CoinGecko.
+
+Gracefully handle missing market data.
+
+---
+
+9. TRANSACTION HISTORY
+
+Create a transaction explorer.
+
+Display:
+
+- Timestamp
+- Transaction hash
+- Type
+- From
+- To
+- Value
+- Token
+- Status
+- Contract/function when available
+
+Support filters:
+
+- All
+- Incoming
+- Outgoing
+- Transfers
+- Token transfers
+- Contract interactions
+- Swaps where identifiable
+- NFT activity where identifiable
+- Failed transactions
+
+Support time filters:
+
+- 24 hours
+- 7 days
+- 30 days
+- 90 days
+- All time
+
+Pagination or controlled loading must be used.
+
+Do not load thousands of transactions into the browser at once.
+
+---
+
+10. TRANSACTION DETAIL
+
+Clicking a transaction must open a detailed view.
+
+Show:
+
+- Transaction hash
+- Block number
+- Timestamp
+- From
+- To
+- Native value
+- Gas used
+- Gas price where available
+- Transaction status
+- Contract address
+- Function name/signature where available
+- Token transfers
+- Important logs/events where useful
+
+Provide:
+
+VIEW ON BLOCK EXPLORER
+
+where an appropriate BOT Chain explorer URL is known.
+
+Do not invent explorer URLs.
+
+---
+
+11. TRANSACTION AI EXPLANATION
+
+Each relevant transaction should have:
+
+EXPLAIN TRANSACTION
+
+The backend should collect structured transaction information and send a compact representation to Gemini.
+
+Gemini should explain what happened in plain English.
+
+The explanation must:
+
+- Use only supplied evidence.
+- Clearly distinguish facts from interpretation.
+- Avoid unsupported claims.
+- Avoid pretending to know information that was not supplied.
+- Be concise.
+- Mention important amounts and addresses.
+- Explain contract interaction in understandable language.
+
+---
+
+12. WALLET ACTIVITY TIMELINE
+
+Create a chronological activity timeline.
+
+Events should look like:
+
+TOKEN TRANSFER
+
+SWAP
+
+CONTRACT INTERACTION
+
+NFT TRANSFER
+
+NATIVE TRANSFER
+
+FAILED TRANSACTION
+
+UNKNOWN ACTIVITY
+
+Each event should have:
+
+- Timestamp
+- Short description
+- Value when available
+- Address involved
+- Transaction link
+
+The timeline must be visually smooth and easy to scan.
+
+---
+
+13. TOP COUNTERPARTIES
+
+Analyze addresses that the wallet interacts with.
+
+Show:
+
+- Address
+- Number of interactions
+- First interaction
+- Last interaction
+- Direction of activity where possible
+- Assets involved where available
+- Classification
+
+Potential classifications:
+
+- Wallet
+- Contract
+- Token
+- DEX
+- Bridge
+- Lending
+- NFT
+- DAO
+- Exchange
+- Unknown
+
+Do not claim an address is a specific protocol without evidence.
+
+---
+
+14. FUND FLOW
+
+Create a visual representation of important wallet relationships.
+
+Example:
+
+Wallet
+
+↓
+
+Contract A
+
+↓
+
+Wallet B
+
+↓
+
+Contract C
+
+The initial implementation does not need a massive graph.
+
+Focus on:
+
+- Wallet
+- Top counterparties
+- Important contracts
+- Direction
+- Interaction count
+
+The graph must remain usable on mobile.
+
+---
+
+15. WALLET ACTIVITY SCORE
+
+Create a deterministic activity score.
+
+The score must be calculated by application code, not invented by Gemini.
+
+Possible factors:
+
+- Transaction frequency
+- Active days
+- Contract interaction frequency
+- Number of counterparties
+- Recent activity
+- Failed transaction frequency
+
+Display:
+
+ACTIVITY SCORE
+
+0-100
+
+Also display the factors that influenced the score.
+
+Keep the scoring algorithm in a dedicated utility file.
+
+Comment the algorithm clearly.
+
+---
+
+16. AI WALLET PROFILE
+
+Generate an AI profile using structured wallet metrics.
+
+The profile should include:
+
+Primary activity
+
+Activity level
+
+Most-used contracts
+
+Important counterparties
+
+Recent behavior
+
+Notable observations
+
+The AI must not invent facts.
+
+Every important conclusion should be traceable to supplied blockchain data.
+
+---
+
+17. AI INVESTIGATION REPORT
+
+Create a dedicated investigation report.
+
+Sections:
+
+Wallet behavior
+
+What the wallet primarily does.
+
+Activity
+
+How active it is.
+
+Assets
+
+Important holdings.
+
+Contract usage
+
+Important contracts/protocols.
+
+Counterparties
+
+Important addresses.
+
+Fund movement
+
+Major incoming/outgoing flows.
+
+Recent changes
+
+Important recent activity.
+
+Attention signals
+
+Potentially unusual activity.
+
+Overall assessment
+
+A concise summary.
+
+The report should distinguish:
+
+FACT
+
+from:
+
+INTERPRETATION
+
+when necessary.
+
+---
+
+18. ATTENTION SIGNALS
+
+Do not call this a definitive "scam detector."
+
+Call it:
+
+ATTENTION SIGNALS
+
+Potential signals include:
+
+- Unusually large transfer
+- Sudden activity increase
+- New contract interaction
+- Unusual token approval
+- Rapid fund movement
+- Large outbound transaction
+- Unusually high failed transaction activity
+- Interaction with an unknown contract
+
+Every signal must contain evidence.
+
+Example:
+
+LARGE OUTBOUND TRANSFER
+
+Amount:
+$8,420
+
+Reason:
+This transaction is significantly larger than the wallet's recent average outgoing transaction.
+
+Provide a link to the transaction.
+
+Never tell users:
+
+"This wallet is definitely a scam."
+
+AI is not an authoritative security oracle.
+
+---
+
+19. ASK THE WALLET AI CHAT
+
+This is a core feature.
+
+Create a dedicated chat section called:
+
+ASK THE WALLET
+
+The chat is scoped to the wallet currently being investigated.
+
+Users can ask questions such as:
+
+"What has this wallet been doing recently?"
+
+"What was its largest transaction?"
+
+"Which contract does it interact with most?"
+
+"How much USDC entered the wallet?"
+
+"What happened yesterday?"
+
+"Has it interacted with a bridge?"
+
+"What are its most important transactions?"
+
+"Why is the activity score high?"
+
+"Show me unusual activity."
+
+The AI must answer using the investigation data.
+
+Do not allow the AI to pretend it has live blockchain access.
+
+The backend retrieves relevant information first.
+
+Then the relevant data is supplied to the model.
+
+---
+
+20. CHAT DATA RETRIEVAL
+
+Do not send the entire transaction history to Gemini for every question.
+
+Implement a simple query/data-selection layer.
+
+Flow:
+
+USER QUESTION
+
+↓
+
+Determine relevant information
+
+↓
+
+Retrieve relevant wallet data
+
+↓
+
+Create compact evidence
+
+↓
+
+Gemini
+
+↓
+
+Answer
+
+This keeps token usage low and improves accuracy.
+
+---
+
+21. AI EVIDENCE
+
+AI answers should contain evidence when appropriate.
+
+For example:
+
+AI:
+
+"The wallet made a large USDC transfer."
+
+Then provide:
+
+Transaction:
+0x123...
+
+Amount:
+12,400 USDC
+
+VIEW TRANSACTION
+
+The user should be able to inspect the source data.
+
+This is a major trust feature.
+
+---
+
+22. SUGGESTED CHAT QUESTIONS
+
+When the chat is empty, show suggested questions.
+
+Examples:
+
+WHAT HAPPENED RECENTLY?
+
+WHAT IS THIS WALLET MAINLY USED FOR?
+
+SHOW THE LARGEST TRANSACTIONS
+
+WHAT CONTRACTS DOES IT USE MOST?
+
+ARE THERE UNUSUAL TRANSACTIONS?
+
+These should be clickable.
+
+---
+
+23. RECENT INVESTIGATIONS
+
+Store recently investigated addresses locally.
+
+Use localStorage for V1.
+
+Store:
+
+- Address
+- Network
+- Timestamp
+
+Do not create a database unless it is genuinely needed.
+
+---
+
+24. REPORT ANCHORING ON BOT CHAIN
+
+Prepare the architecture for a future BOT Chain report anchoring feature.
+
+The application should eventually allow:
+
+CREATE VERIFIABLE REPORT
+
+The report remains off-chain.
+
+A hash of the report is stored on BOT Chain.
+
+The smart contract can store:
+
+- reportId
+- wallet address
+- timestamp
+- reportHash
+
+Do not put private or unnecessary wallet data directly on-chain.
+
+If implementing this in V1 is straightforward, include it.
+
+Otherwise create the architecture and mark the feature clearly as optional/future.
+
+---
+
+25. UI DESIGN
+
+The design is extremely important.
+
+Do NOT create a generic Web3 dashboard.
+
+The visual direction is:
+
+DARK CYBER FORENSICS
+
+Think:
+
+- Dark arcade
+- Blockchain terminal
+- Cyber investigation interface
+- Subtle green glow
+- Technical data
+- High information density
+- Smooth animations
+- Strong typography
+- Clean hierarchy
+
+The site should feel like the user is investigating a blockchain system.
+
+Primary visual direction:
+
+Near-black background.
+
+Very dark green surfaces.
+
+Muted terminal green.
+
+Occasional brighter green for active states.
+
+Gray/white text.
+
+Use green carefully.
+
+Do not turn the entire interface neon green.
+
+---
+
+26. DO NOT COPY GAS.ZIP
+
+The visual direction may be inspired by the feeling of dark arcade/cyber interfaces, but do not copy another website's exact layout, branding, assets, or design.
+
+Create an original visual identity.
+
+---
+
+27. FLUIDITY
+
+The application must feel fast and continuous.
+
+Use:
+
+- Skeleton loading
+- Progressive data loading
+- Smooth page transitions
+- Animated state changes
+- Subtle number transitions
+- Progressive timeline rendering
+- Clear hover/focus states
+- Proper mobile transitions
+
+Do not over-animate.
+
+Animations should communicate state.
+
+Never make an animation delay the user's ability to use the application.
+
+---
+
+28. RESPONSIVE DESIGN
+
+The application must work well on:
+
+- Android phones
+- iPhones
+- tablets
+- laptops
+- desktop monitors
+
+Mobile is important.
+
+The investigation dashboard must not simply shrink the desktop layout.
+
+Design mobile layouts intentionally.
+
+The chat must work well on mobile.
+
+Tables should become cards or horizontally scrollable areas where appropriate.
+
+The transaction graph must remain usable.
+
+---
+
+29. ERROR HANDLING
+
+Every external API can fail.
+
+Handle:
+
+- Moralis errors
+- Gemini errors
+- CoinGecko errors
+- RPC errors
+- Wallet errors
+- Invalid address
+- Unsupported network
+- Rate limits
+- Timeout
+- Missing token metadata
+- Missing market data
+- Empty wallet
+- No transaction history
+
+Do not show raw stack traces to normal users.
+
+Provide useful error messages.
+
+Log detailed information for developers.
+
+---
+
+30. API SECURITY
+
+Never expose:
+
+MORALIS_API_KEY
+
+COINGECKO_API_KEY
+
+GEMINI_API_KEY
+
+or any other secret in frontend code.
+
+Use server-side endpoints.
+
+Only public configuration such as the Reown Project ID may be exposed to the client where appropriate.
+
+Create:
+
+.env.example
+
+with placeholders.
+
+Never commit .env.
+
+---
+
+31. AI PROVIDER ARCHITECTURE
+
+Create the AI code so that the model provider can eventually be changed.
+
+For V1:
+
+Gemini.
+
+Do not hardcode Gemini calls throughout the application.
+
+Create one AI service/interface.
+
+This will allow future providers to be added.
+
+Do not implement unnecessary provider rotation in V1.
+
+If multiple AI providers are later added, use provider fallback rather than blindly rotating API keys.
+
+---
+
+32. MULTIPLE API KEYS
+
+Do not implement fake quota bypassing.
+
+Do not assume multiple API keys from the same provider/project provide independent quotas.
+
+If fallback support is implemented later, it should be provider-aware and respect rate limits.
+
+For V1, keep one properly configured Gemini server-side API key.
+
+---
+
+33. CODE ORGANIZATION
+
+Keep files focused.
+
+Target approximately 20 to 30 meaningful source/configuration files.
+
+Do not optimize for the smallest possible file count.
+
+Do not create giant files.
+
+As a guideline, avoid files exceeding approximately 300 lines unless there is a clear reason.
+
+Do not create unnecessary abstraction layers.
+
+Suggested structure:
+
+src/
+
+components/
+
+pages/
+
+services/
+
+ai/
+
+utils/
+
+config/
+
+context/
+
+styles/
+
+api/
+
+Keep responsibilities clear.
+
+---
+
+34. DOCUMENTATION REQUIREMENT
+
+The developer is not an experienced programmer.
+
+Every major file must have a concise header comment explaining:
+
+- What this file does.
+- Why it exists.
+- What other part of the application uses it.
+
+Every exported function/component/API route must have a concise comment explaining:
+
+- What it does.
+- Main inputs.
+- Main output.
+- Important side effects.
+
+Do NOT comment every obvious line.
+
+Avoid comments such as:
+
+// Set loading to true
+
+Instead write useful comments such as:
+
+// Starts the investigation request and prevents duplicate scans
+// while wallet data is being collected.
+
+Keep comments accurate.
+
+Update comments if implementation changes.
+
+---
+
+35. NO AI SLOP IN CODE OR UI TEXT
+
+This is a strict requirement.
+
+Do not use em dashes.
+
+Never use:
+
+—
+
+in UI text, generated copy, comments, documentation, or AI responses.
+
+Prefer commas, periods, colons, or parentheses.
+
+Avoid generic AI-generated marketing language such as:
+
+- Revolutionary
+- Next-generation
+- Seamless
+- Unlock
+- Empower
+- Cutting-edge
+- Delve
+- Game-changing
+- Transform
+- Unleash
+- Supercharge
+
+Do not write fake marketing copy.
+
+Use direct language.
+
+Bad:
+
+"Unlock the power of next-generation AI to seamlessly investigate blockchain activity."
+
+Good:
+
+"Investigate wallet activity using blockchain data and AI analysis."
+
+The interface should sound like a serious developer tool.
+
+---
+
+36. AI RESPONSE STYLE
+
+Gemini responses must be:
+
+- Direct
+- Concise
+- Evidence-based
+- Natural
+- Technical when necessary
+- Understandable to non-experts
+
+Avoid excessive headings.
+
+Avoid repeating the question.
+
+Avoid unnecessary disclaimers.
+
+Avoid dramatic language.
+
+Avoid em dashes.
+
+If information is unavailable, say so.
+
+If evidence is insufficient, say so.
+
+Never fabricate blockchain activity.
+
+---
+
+37. ACCESSIBILITY
+
+Include:
+
+- Keyboard navigation
+- Visible focus states
+- Accessible buttons
+- Appropriate labels
+- Good contrast
+- Screen-reader-friendly important controls
+
+Do not sacrifice accessibility for visual effects.
+
+---
+
+38. PERFORMANCE
+
+Avoid unnecessary API calls.
+
+Cache appropriate wallet data during an investigation.
+
+Do not repeatedly request identical data.
+
+Paginate large transaction sets.
+
+Lazy-load expensive UI where appropriate.
+
+Do not install a library just to perform a trivial operation.
+
+---
+
+39. TESTING
+
+Create basic tests or testable utility functions for:
+
+- Address validation
+- Activity score calculation
+- Transaction classification
+- Formatting
+- Attention signal detection
+
+Before considering a feature complete, test:
+
+1. Valid wallet
+2. Invalid wallet
+3. Empty wallet
+4. Wallet with transactions
+5. API failure
+6. Gemini failure
+7. Wrong network
+8. Mobile layout
+9. Desktop layout
+
+---
+
+40. DEVELOPMENT PROCESS
+
+Do NOT attempt to build everything at once.
+
+Build in stages.
+
+Stage 1:
+Project setup and visual shell.
+
+Stage 2:
+BOT Chain configuration and wallet connection.
+
+Stage 3:
+Wallet address investigation.
+
+Stage 4:
+Moralis/RPC data integration.
+
+Stage 5:
+Transaction and asset dashboard.
+
+Stage 6:
+Wallet metrics and counterparty analysis.
+
+Stage 7:
+AI investigation.
+
+Stage 8:
+Ask the Wallet chat.
+
+Stage 9:
+Attention signals and evidence.
+
+Stage 10:
+Final UI polish and responsive behavior.
+
+Stage 11:
+BOT Chain report anchoring if included.
+
+Stage 12:
+Production build and deployment preparation.
+
+After each stage:
+
+- Run the application.
+- Test the feature.
+- Fix errors.
+- Update documentation.
+- Update feedback.txt.
+- Update steps.txt if the human needs to perform a new setup action.
+
+Do not silently continue past a broken stage.
+
+---
+
+41. feedback.txt
+
+Create a file at the project root:
+
+feedback.txt
+
+This file is for communication between the coding agent and the human developer.
+
+After every major development stage, update it with:
+
+DATE
+
+WHAT WAS BUILT
+
+FILES CREATED/CHANGED
+
+WHAT WORKS
+
+WHAT HAS NOT BEEN TESTED
+
+KNOWN ISSUES
+
+WHAT THE HUMAN SHOULD CHECK
+
+NEXT DEVELOPMENT STEP
+
+Keep it concise.
+
+Example:
+
+STAGE:
+Wallet connection
+
+STATUS:
+Implemented
+
+FILES:
+src/components/WalletConnect.jsx
+src/config/chains.js
+
+WORKS:
+Reown AppKit loads.
+BOT Chain Testnet is configured.
+
+NOT TESTED:
+Real mobile wallet connection.
+
+HUMAN CHECK:
+Connect an actual wallet and confirm BOT Chain is detected.
+
+NEXT:
+Implement wallet data retrieval.
+
+Do not claim something works if it has not actually been tested.
+
+---
+
+42. steps.txt
+
+Create another root-level file:
+
+steps.txt
+
+This is specifically for the human developer.
+
+Write simple numbered instructions.
+
+It must explain:
+
+1. How to install dependencies.
+2. How to create .env.
+3. Where to put each API key.
+4. How to obtain each required API key.
+5. How to start the development server.
+6. How to test the application.
+7. How to configure Reown.
+8. How to configure BOT Chain.
+9. How to deploy to Vercel.
+10. Which environment variables must be added to Vercel.
+11. How to build before deployment.
+12. How to verify the production deployment.
+13. Common errors and their fixes.
+
+Use plain language.
+
+Assume the human is still learning JavaScript/React.
+
+Never assume advanced knowledge.
+
+Update this file whenever a new human setup step is introduced.
+
+---
+
+43. README.md
+
+Create a README that explains:
+
+- What the application does.
+- Why it exists.
+- Architecture.
+- Folder structure.
+- API responsibilities.
+- BOT Chain configuration.
+- AI architecture.
+- How investigations work.
+- How the chat works.
+- Environment variables.
+- Local development.
+- Deployment.
+- Known limitations.
+
+Keep it understandable.
+
+---
+
+44. ENVIRONMENT VARIABLES
+
+Create .env.example.
+
+Use names similar to:
+
+VITE_REOWN_PROJECT_ID=
+BOT_RPC_URL=
+MORALIS_API_KEY=
+COINGECKO_API_KEY=
+GEMINI_API_KEY=
+
+Do not expose secret keys through VITE_ variables.
+
+Verify that the frontend bundle does not contain secret API keys.
+
+---
+
+45. NO FAKE DATA
+
+During development, mock data may be used temporarily only when an API is unavailable.
+
+If mock data is used:
+
+- Clearly label it.
+- Put it in a dedicated mock file.
+- Do not leave fake data pretending to be live data.
+- Replace it before production.
+
+Never invent wallet balances, transaction counts, token prices, or investigation results.
+
+---
+
+46. FINAL QUALITY REQUIREMENT
+
+The finished application should feel like a coherent product.
+
+It should not look like several AI-generated pages glued together.
+
+Maintain:
+
+- One design system.
+- One typography system.
+- One spacing system.
+- Consistent buttons.
+- Consistent cards.
+- Consistent loading states.
+- Consistent error states.
+- Consistent terminology.
+
+The interface should feel intentional.
+
+---
+
+47. IMPORTANT DEVELOPMENT RULE
+
+Before creating new code, inspect the existing project.
+
+Do not overwrite working files unnecessarily.
+
+Do not duplicate functionality.
+
+Do not create two components that perform the same job.
+
+If an existing component can be cleanly reused, reuse it.
+
+If a file becomes too large, split it by responsibility.
+
+---
+
+48. FIRST TASK
+
+Start by inspecting the current project directory.
+
+If this is a new project, initialize the React/Vite project.
+
+Then create the project architecture.
+
+Before implementing the complete application, build the initial visual shell.
+
+The first screen should establish the final design language:
+
+Dark cyber investigation interface.
+
+BOT Chain identity.
+
+Wallet investigation input.
+
+Subtle arcade/terminal effects.
+
+Responsive layout.
+
+Do not create the full application in one giant step.
+
+After the initial shell is complete:
+
+1. Update feedback.txt.
+2. Update steps.txt.
+3. Explain what was created.
+4. Tell the human exactly what they need to do next.
+5. Wait for confirmation before moving to the next major stage if interactive development is possible.
+
+The goal is a maintainable BOT Chain AI dApp, not simply a large generated code dump.

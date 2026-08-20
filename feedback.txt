@@ -1,0 +1,546 @@
+DATE: 2026-08-20
+
+STAGE: 1 - Project Setup + Visual Shell
+STATUS: Complete
+
+---
+
+STAGE: 2 - Wallet Connection
+STATUS: Complete
+
+---
+
+STAGE: 3 - Moralis + RPC Backend
+STATUS: Complete
+
+---
+
+STAGE: 10 - Final UI Polish + Responsive
+STATUS: Complete
+
+WHAT WAS BUILT:
+- attentionSignals.js analysis module (deterministic attention signal detection)
+- Attention Signals section on investigation dashboard (severity-colored cards)
+- Activity Timeline section (chronological event visualization with timeline dots)
+- Fund Flow section (incoming/outgoing aggregated by counterparty)
+- Transaction filters (type filter: All/Transfers/Tokens/Contracts/Swaps/Other)
+- Time filters (24h/7d/30d/90d/All)
+- Transaction detail view (click to expand: hash, from, to, value, status, time)
+- Responsive mobile styles for fund flow, filters, timeline, and transaction detail
+
+FILES CHANGED:
+api/analysis/attentionSignals.js (NEW)
+api/investigate.js (added attentionSignals to investigation object)
+src/pages/Investigate.jsx (added attention signals, timeline, fund flow, filters, detail)
+src/index.css (added fund flow, timeline, filter, transaction detail styles + mobile)
+
+STAGE: 12 - Production Build & Deployment
+STATUS: Complete
+
+WHAT WAS BUILT:
+- Improved InvestigationLoader with progressive stage indicators
+- Visual polish: subtle glow effects, hover states, animations
+- Better focus states and button interactions
+- Timeline dot glow effects on hover
+- Card hover effects with subtle green glow
+- Stat item hover effects with lift animation
+- Section fade-in animations
+- Firefox scrollbar styling
+- Investigation page max-width for better readability
+- Complete deployment documentation in steps.txt
+- Full project documentation in README.md
+
+FILES CHANGED:
+src/components/InvestigationLoader.jsx (progressive stage indicators)
+src/index.css (visual polish, animations, glow effects)
+steps.txt (complete deployment guide)
+README.md (full project documentation)
+
+WHAT WORKS:
+- Build completes successfully (npm run build)
+- No lint errors (19 minor warnings, 0 errors)
+- All investigation features functional
+- Visual polish applied throughout
+- Deployment documentation complete
+
+HUMAN CHECK:
+1. Run npm run dev and test the investigation page
+2. Verify the loading stages show progressive indicators
+3. Test transaction filters display horizontally
+4. Check hover effects on cards and buttons
+5. Verify mobile layout works correctly
+6. Review steps.txt for deployment instructions
+7. Review README.md for project documentation
+
+NEXT: Deploy to Vercel or continue development
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 13 - Bug Fixes + Theme Refinement
+STATUS: Complete
+
+WHAT WAS BUILT:
+- Fixed wallet age: old wallets no longer show "Today"
+  - Token transfer timestamps were becoming "NaN" because new Date() was
+    given a raw unix-seconds string. Added toSeconds() in wallet.js that
+    accepts seconds, milliseconds, and ISO strings.
+  - Timestamps were sorted as strings (lexicographic) which broke the
+    earliest/latest activity order. Switched to numeric sort.
+  - The recent-block scan only covers the newest ~200k blocks, so very old
+    inactive wallets looked brand new. Added getFirstActivity() in
+    moralis.js: a binary search over the whole chain finds the earliest
+    on-chain activity, cached per address.
+  - Wallet age shows "Unknown" when no activity is found, "Less than a day"
+    for age 0, and "N days" otherwise. lastActivity no longer shows NaN.
+- Fixed AI markdown rendering
+  - Gemini returns markdown (bold, headings, lists) but the UI printed the
+    raw ** markers. Added react-markdown dependency and a Markdown.jsx
+    component styled for the terminal theme.
+  - Applied to AIProfile, AskWallet chat, and transaction explanations.
+- Theme refinement (arcade/hacker, dark green + dark orange)
+  - CRT vignette overlay added to the existing scanline effect.
+  - Arcade corner brackets frame the investigation terminal.
+  - Blinking terminal cursor on the navbar logo, home title, and terminal.
+  - "BOT CHAIN ONLINE :: chain 968" boot line in the home terminal.
+  - Button press feedback and a scanline sweep on primary buttons.
+  - Text glow on the wallet address, stat values, and activity score
+    (styled as an arcade high score).
+
+FILES CHANGED:
+api/normalizers/wallet.js (toSeconds, numeric sort, age fix)
+api/services/moralis.js (getFirstActivity binary search + cache)
+api/investigate.js (wired first-activity search into overview)
+src/components/Markdown.jsx (NEW - react-markdown wrapper)
+src/components/AIProfile.jsx (render report as markdown)
+src/components/AskWallet.jsx (render chat as markdown)
+src/pages/Investigate.jsx (age display, markdown, score styling)
+src/pages/Home.jsx (title cursor, terminal boot line)
+src/index.css (markdown styles, CRT vignette, corner brackets, glows)
+package.json (+ react-markdown)
+
+WHAT WORKS:
+- Wallet age is accurate for old wallets (verified against a wallet whose
+  first activity was ~30 days ago and one ~21 hours old)
+- No NaN timestamps; lastActivity is a real date
+- AI report/chat return markdown that renders styled in the UI
+- Build completes (npm run build), lint has no new warnings
+- Empty wallets show "Unknown" age instead of "Today"
+
+WHAT WAS ACTUALLY TESTED:
+- Live investigate against BOT Chain RPC for two addresses
+- getFirstActivity() binary search speed (~6s first call, cached after)
+- Normalizer edge cases: old-but-inactive, empty, and recent wallets
+- /api/investigate/report and /api/chat endpoints (Gemini 503 was a
+  transient upstream error, not a code issue)
+
+WHAT HAS NOT BEEN TESTED:
+- Browser visual check of the new theme and markdown rendering
+- Mobile layout with the new styles
+
+KNOWN ISSUES:
+- Investigate can take 30-100s on slow RPC responses (pre-existing)
+- Gemini occasionally returns 503 under high demand (upstream)
+
+HUMAN CHECK:
+1. Run npm run dev, investigate an old wallet, confirm age is correct
+2. Check the AI Profile and Ask the Wallet render bold/headings/lists
+3. Verify the arcade theme looks subtle and readable on desktop + mobile
+
+NEXT: Browser testing of theme, or continue feature development
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 14 - UI Cleanup + Investigation Page Restructure
+STATUS: Complete
+
+WHAT WAS BUILT:
+- Removed all blinking cursors (navbar logo, home title, terminal title)
+- Rewrote InvestigationLoader
+  - Horizontal progress bar that fills toward 95% over ~30s
+  - Steps shown as horizontal chips, blinking one-by-one in order
+  - "ANALYSING WALLET" status, progress driven by max(elapsed, real stage)
+  - Stage names synced with InvestigationContext
+- Simplified AI error handling
+  - GEMINI_UNAVAILABLE constant in api/services/gemini.js returned on
+    upstream 503/429 instead of raw error text
+  - Friendly messages in AIProfile, AskWallet, and tx explanation
+- Restructured the Investigate page section order
+  - Wallet Overview -> Activity Score -> AI Analysis (renamed from
+    "AI Profile") -> Ask the Wallet -> Attention Signals -> Token Holdings
+    (BOT + Cross-Chain combined in one card) -> Counterparties -> Fund Flow
+    -> Transactions
+  - Removed the Activity Timeline section entirely
+- Fund Flow is now tabbed (INCOMING / OUTGOING), outgoing expanded by default
+- Token Holdings combines BOT Chain tokens and Cross-Chain in one card
+- CrossChainTokens rewritten with an "embedded" prop
+  - Compact chain-chip picker (chips per network, USD totals) + expandable
+    token list; standalone mode still works as a full section
+- Expanded cross-chain coverage to 7 networks: Ethereum, BSC, Polygon,
+  Arbitrum, Optimism, Base, Avalanche
+
+FILES CHANGED:
+src/components/InvestigationLoader.jsx (rewritten: 30s bar + chips)
+src/context/InvestigationContext.jsx (stage names synced)
+api/services/gemini.js (GEMINI_UNAVAILABLE constant)
+src/components/AIProfile.jsx (friendly error message)
+src/components/AskWallet.jsx (friendly error message)
+src/pages/Investigate.jsx (section reorder, timeline removed, fund tabs,
+  combined token holdings, AI Analysis rename, friendly tx-explanation error)
+src/components/CrossChainTokens.jsx (embedded prop + compact chip layout)
+api/services/crosschain.js (7 networks, Polygon symbol -> POL)
+src/index.css (fund-tab styles, removed cursor/blink styles, mobile tab fix)
+feedback.txt (this stage)
+
+WHAT WORKS:
+- Build completes (npm run build)
+- Lint has no new warnings (20 pre-existing, unchanged)
+- All sections render in the new order
+- Fund flow tabs switch between incoming/outgoing, outgoing default
+- Cross-chain shows as compact chips inside the Token Holdings card
+
+WHAT HAS NOT BEEN TESTED:
+- Browser visual check of the new section order and fund tabs
+- Cross-chain compact layout with the new networks
+
+HUMAN CHECK:
+1. npm run dev and investigate a wallet
+2. Confirm the loader shows a 30s progress bar with blinking steps
+3. Verify section order: AI Analysis then Ask the Wallet, no timeline
+4. Click Fund Flow tabs; outgoing should be expanded by default
+5. Check Token Holdings card combines BOT + Cross-Chain chips
+6. Disable Gemini (or hit a 503) and confirm friendly error text
+
+NEXT: Feature recommendations (easy + contract)
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 15 - Age Fix + Loader + Merged AI + Export + On-Chain Registry
+STATUS: Complete
+
+WHAT WAS BUILT:
+- Fixed wallet age showing "Unknown" for old wallets
+  - The RPC is occasionally flaky; single failed eth_getLogs calls were
+    swallowed into [] and made wallets look empty. Added rpcWithRetry() and
+    retried timestamp fetches (a failed timestamp is never cached as null).
+  - Wallets whose earliest activity is a native transfer / contract call
+    produce no ERC-20 Transfer logs, so the log-based binary search found
+    nothing -> "Unknown". Added getEarliestSentBlock(): a binary search over
+    eth_getTransactionCount (the nonce) finds the earliest block the wallet
+    SENT anything, and getFirstActivity() keeps whichever timestamp is older.
+  - Verified: known test wallet firstActivity corrected from 1787112719 to
+    1777266515 (older = more accurate).
+- Loader: removed the "(Xs / 30s)" counter and the "about 30 seconds" hint.
+  Now just the ANALYSING WALLET label, progress bar, and blinking steps.
+- Merged AI Analysis and Ask the Wallet into one card/section
+  - AIProfile and AskWallet gained an "embedded" prop (no own card wrapper);
+    Investigate.jsx renders both inside a single card with a divider.
+- New: Export/download investigation report
+  - src/utils/report.js: buildReportMarkdown() + downloadReport(); a
+    "DOWNLOAD REPORT" button in the investigate header saves a .md file.
+- New: On-chain InvestigationRegistry (contract feature)
+  - contracts/InvestigationRegistry.sol: anchorReport/getReports/reportCount,
+    stores keccak256 report hash + block timestamp + investigator.
+  - shared/registryAbi.js: single ABI source used by server, deploy, client.
+  - api/services/registry.js: reads reports via viem eth_call, anchors via
+    BOT_PRIVATE_KEY wallet client. Degrades gracefully when not configured.
+  - api/registry.js routes: GET /registry/status, GET /registry/reports/:wallet,
+    POST /registry/anchor. Wired into server.js.
+  - scripts/deploy-registry.js + npm run deploy:registry: compiles with solc
+    and deploys with viem; prints address to put in REGISTRY_CONTRACT.
+  - src/components/RegistryVerify.jsx: shows report hash (keccak256 of the
+    downloadable markdown), ANCHOR REPORT button, and lists anchored hashes.
+  - solc@^0.8.28 added as devDependency.
+- .env.example documents REGISTRY_CONTRACT and BOT_PRIVATE_KEY.
+
+FILES CHANGED:
+api/services/moralis.js (retries, getEarliestSentBlock, firstActivity fallback)
+src/components/InvestigationLoader.jsx (removed seconds counter + hint)
+src/components/AIProfile.jsx (embedded prop, removed elapsed timer)
+src/components/AskWallet.jsx (embedded prop)
+src/pages/Investigate.jsx (merged AI section, download button, RegistryVerify)
+src/utils/report.js (NEW - markdown builder, download, getReportHash)
+src/components/RegistryVerify.jsx (NEW)
+contracts/InvestigationRegistry.sol (NEW)
+shared/registryAbi.js (NEW)
+api/services/registry.js (NEW)
+api/registry.js (NEW)
+scripts/deploy-registry.js (NEW)
+server.js (registry router)
+package.json (+solc devDep, +deploy:registry script)
+.env.example (registry vars)
+feedback.txt (this stage)
+
+WHAT WORKS:
+- Build completes; lint has no new warnings (20 pre-existing)
+- Contract compiles (3104 bytes bytecode, functions anchorReport/getReports/reportCount)
+- Registry API degrades gracefully (503/400 when unconfigured/invalid)
+- getFirstActivity + getEarliestSentBlock return real values on live RPC
+- Server endpoints verified via curl
+
+WHAT HAS NOT BEEN TESTED:
+- Actual contract deployment (needs a funded BOT_PRIVATE_KEY + npm run deploy:registry)
+- Browser visual check of merged AI card, download button, RegistryVerify section
+
+HUMAN CHECK:
+1. Investigate a wallet with only native BOT activity -> age should no longer be Unknown
+2. Loader should show only the bar + steps, no seconds counter
+3. AI Analysis and Ask the Wallet are now one card
+4. Click DOWNLOAD REPORT -> .md file downloads with full report
+5. Deploy the registry (npm run deploy:registry), set REGISTRY_CONTRACT,
+   then ANCHOR REPORT ON-CHAIN and confirm the hash appears
+6. Re-download the report and verify keccak256(markdown) matches the anchored hash
+
+DATE: 2026-08-20
+
+STAGE: 16b - Deploy fix: legacy transactions for BOT Chain RPC
+STATUS: Complete
+
+PROBLEM:
+- npm run deploy:registry failed at submission with:
+  InvalidParamsRpcError: 'Invalid parameters were provided to the RPC method.'
+- Root cause: viem defaults to EIP-1559 (type 0x2) transactions. BOT Chain's
+  RPC (https://rpc.bohr.life) rejects typed transactions (it fakes
+  eth_maxPriorityFeePerGas by returning eth_gasPrice). eth_gasPrice works
+  fine (returns 20 gwei).
+
+FIX:
+- Force legacy transactions (type: 'legacy') everywhere the server writes:
+  - scripts/deploy-registry.js  -> deployContract({ type: 'legacy' })
+  - api/services/registry.js    -> anchorReport + mintSnapshot writeContract
+                                   ({ type: 'legacy' })
+
+VERIFIED:
+- Registry service imports OK
+- Lint: 20 warnings (unchanged), build passes
+- Node confirms eth_gasPrice works (0x4a817c800 = 20 gwei)
+
+HUMAN CHECK:
+- Re-run: npm run deploy:registry  (with BOT_PRIVATE_KEY set)
+- Then set REGISTRY_CONTRACT=<deployed address> in .env and restart server
+
+NEXT: Re-deploy, then anchor + mint on an investigation page
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 16c - DEPLOYED InvestigationRegistry (root cause found + live test)
+STATUS: Complete
+
+REAL ROOT CAUSE (the earlier "Invalid parameters" error):
+- createWalletClient({ account: PRIVATE_KEY }) passes a raw private key
+  STRING. viem's parseAccount() treats a string account as the sender
+  ADDRESS, so the 64-hex private key was sent as `from`.
+- RPC (go-ethereum) rejected it: 'invalid argument 0: hex string has length
+  64, want 40 for common.Address'.
+- Fix: use privateKeyToAccount(PRIVATE_KEY) from 'viem/accounts'
+  (NOT a top-level 'viem' export in viem 2.55).
+- Also kept type: 'legacy' on writes (harmless, works).
+
+FILES CHANGED:
+- scripts/deploy-registry.js: account: privateKeyToAccount(PRIVATE_KEY)
+- api/services/registry.js: same fix for anchorReport + mintSnapshot
+- shared/registryAbi.js: added missing supportsInterface(bytes4) ABI entry
+
+DEPLOYED:
+- Contract: 0x8deec677f8486d0f9dbb0263ddbe526ad89111db (BOT Chain testnet)
+- REGISTRY_CONTRACT added to .env (line 28)
+- name='BOT Investigation Snapshot', symbol=BOTSNAP
+- supportsInterface: ERC165=true, ERC721=true
+
+LIVE INTEGRATION TEST (real gas, testnet):
+- anchorReport -> tx 0xad34f82809ad13f6b1493aa4e4fc49df66b89b07aa7bd18a612f595b1551195c
+- mintSnapshot -> tokenId 1, tx 0xdbb048a553625373472f21d63603e76b2edbe7868f16fdedae08e8a9c31156fb
+- getReports, getSnapshots, getSnapshotAtOrBefore(now) all return correct data
+- investor recorded = deployer address 0x5ca91FDe8aA32352fb2Ced6AEB1D74e873f1174A
+
+HUMAN CHECK:
+- Anchor + Mint buttons now active on investigate pages (server must restart
+  to pick up REGISTRY_CONTRACT)
+- /snapshot/<wallet> shows minted snapshots; timestamp lookup works
+
+NEXT: Browser test of anchor/mint buttons + snapshot page
+
+---
+
+NEXT: Deploy registry contract, or browser testing
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 16 - WalletConnect + Network Switch + Snapshot Minting
+STATUS: Complete
+
+WHAT WAS BUILT:
+- One-switch testnet/mainnet configuration
+  - Client: src/config/botChain.js now defines BOT_NETWORKS (testnet+mainnet)
+    and ACTIVE_NETWORK_KEY; flipping it to 'mainnet' moves the whole app
+    (wallet connect, network detect/add/switch, configs). Mainnet chain id /
+    RPC are marked TODO until known.
+  - Server: api/config/network.js mirrors it via BOT_NETWORK env (default
+    testnet) with BOT_RPC_URL override. moralis.js, registry.js,
+    investigate.js, and server.js now read from it.
+- WalletConnect network detection + add-before-switch
+  - switchToBotChain() detects the wallet's current chain first, adds the
+    active BOT network (wallet_addEthereumChain) when missing (error 4902),
+    then switches (wallet_switchEthereumChain), including a re-switch after
+    adding. Error messages use the active network name.
+- EVM-only connect modal
+  - reown.js createAppKit features: socials:false, email:false,
+    emailShowWallets:false, allWallets:false. Google/X/Farcaster email login
+    and the All Wallets tab are removed.
+- InvestigationRegistry.sol v2: snapshot minting
+  - mintSnapshot(wallet, summaryHash, dataRef) mints a soulbound NFT to the
+    wallet with block timestamp + investigator + full data reference.
+  - Snapshots are ERC-721-shaped: ownerOf, balanceOf, totalSupply, tokenURI
+    (data URI base64 JSON), snapshotsOf, snapshotOf.
+  - getSnapshotAtOrBefore(timestamp) answers "what was known at time T".
+  - Includes ERC165 + base64/hex/uint encoding helpers. Compiles clean
+    (24416 bytes bytecode, no warnings).
+- Registry API extended
+  - GET /api/registry/snapshots/:wallet, GET /api/registry/snapshot-at?ts=,
+    POST /api/registry/mint. shared/registryAbi.js updated with all
+    snapshot functions (single ABI for server, deploy, client).
+- Timestamp page
+  - New route /snapshot/:wallet (and /snapshot): src/pages/Snapshot.jsx
+    browses a wallet's snapshot NFTs and looks up what was known at a chosen
+    date/time. Navbar SNAPSHOT link added.
+- RegistryVerify (investigate page) gained MINT SNAPSHOT button and a
+  TIMESTAMP PAGE link.
+
+FILES CHANGED:
+src/config/botChain.js (networks + ACTIVE_NETWORK_KEY one-switch)
+api/config/network.js (NEW server mirror)
+api/services/moralis.js (uses network config)
+api/services/registry.js (uses network config, mint + snapshot reads)
+api/investigate.js (network/chainId from config)
+server.js (network config, health)
+src/config/reown.js (EVM-only features)
+src/context/WalletContext.jsx (detect + add-before-switch)
+src/components/NetworkStatus.jsx (dynamic chain name)
+src/components/RegistryVerify.jsx (mint + timestamp link)
+src/pages/Snapshot.jsx (NEW timestamp page)
+src/App.jsx (snapshot routes)
+src/components/Navbar.jsx (snapshot link)
+contracts/InvestigationRegistry.sol (v2 minting)
+shared/registryAbi.js (snapshot functions)
+api/registry.js (mint/snapshots/snapshot-at routes)
+.env.example (BOT_NETWORK, per-network RPCs)
+README.md (network switch + registry/snapshot docs)
+package.json (unchanged; solc already present)
+feedback.txt (this stage)
+
+WHAT WORKS:
+- Build passes; lint has no new warnings (20 pre-existing)
+- Contract compiles with all 14 functions, no warnings
+- New endpoints degrade gracefully (503/400) and validated via curl
+- Deploy script errors gracefully without BOT_PRIVATE_KEY
+
+WHAT HAS NOT BEEN TESTED:
+- Actual mainnet config values (TODO until mainnet RPC/chain id known)
+- WalletConnect add-before-switch in a real wallet (needs browser test)
+- Snapshot minting end-to-end (needs deployed contract + funded key)
+
+HUMAN CHECK:
+1. Open the wallet connect modal -> only EVM wallets, no Google/X/Farcaster
+2. Connect on a non-BOT network -> app adds BOT Chain then switches
+3. Flip ACTIVE_NETWORK_KEY / BOT_NETWORK to mainnet after filling real values
+4. Deploy contract, then MINT SNAPSHOT on an investigation page
+5. Open /snapshot/<wallet> and query a timestamp
+
+NEXT: Browser testing, or mainnet values once known
+
+---
+
+DATE: 2026-08-20
+
+STAGE: 17 - UI Polish + Navigation + Mint Fix + Mainnet Guide
+STATUS: Complete
+
+WHAT WAS BUILT:
+- Mint function UX fix: after minting a snapshot, the RegistryVerify component
+  now shows full details (timestamp, summary hash, transaction hash, minted-to
+  address, data reference) in a styled result card. Previously only a text
+  message was shown.
+- Visible navigation throughout the site:
+  - Navbar now shows HOME and SNAPS link in the center with active state
+    highlighting. Logo text hides on mobile to save space.
+  - Investigate page now has a sticky section navigation bar below the
+    header. Sections (Overview, Score, AI Analysis, Signals, Tokens,
+    Counterparties, Fund Flow, Transactions, Registry) are clickable
+    and auto-highlight as you scroll using IntersectionObserver.
+- Removed footer/info-grid from Home page (the 3-card product explanation
+  section).
+- Moralis rate limit handling: CrossChainTokens now detects 429/rate-limit
+  errors and shows a friendly message with a tip about API quota, instead
+  of a raw error.
+- UI polish:
+  - Added .section-nav, .section-nav-btn, .section-nav-active CSS classes
+    for the investigation page section navigation.
+  - Added .navbar-nav, .navbar-nav-link, .navbar-nav-active CSS classes
+    for the new center navigation links.
+  - Added .crosschain-unavailable CSS class for rate-limit state.
+  - Mobile responsive: navbar wraps with nav links on second row, logo
+    text hides, section nav adjusts spacing and font size, wallet address
+    text size reduces.
+- Easy debuggable features added:
+  - Copy address button: clicking the full address on the investigate page
+    copies it to clipboard, shows COPIED feedback for 2 seconds.
+  - Server health indicator: Home page pings /api/health on load and shows
+    SERVER ONLINE/OFFLINE with chain name and chain ID.
+- steps.txt updated with comprehensive mainnet deployment guide:
+  - Pre-mainnet checklist (items 21)
+  - Getting mainnet values (item 22)
+  - Updating client config (item 23)
+  - Updating server config (item 24)
+  - Deploying registry to mainnet (item 25)
+  - Switching Vercel to mainnet (item 26)
+  - Post-mainnet verification (item 27)
+  - Rollback to testnet (item 28)
+  - Common mainnet issues (item 29)
+  - Monitoring tips (item 30)
+
+FILES CHANGED:
+src/components/RegistryVerify.jsx (mint result display with timestamp/hash)
+src/components/Navbar.jsx (HOME + SNAPSHOTS nav links, active state)
+src/components/CrossChainTokens.jsx (rate limit detection + friendly msg)
+src/pages/Home.jsx (removed footer, added server health indicator)
+src/pages/Investigate.jsx (section nav, copy address button, section refs)
+src/index.css (section-nav, navbar-nav, crosschain-unavailable, mobile)
+steps.txt (mainnet deployment guide, items 21-30)
+feedback.txt (this stage)
+
+WHAT WORKS:
+- Build completes (npm run build), no errors
+- Navbar shows HOME and SNAPSHOTS links with active state
+- Section navigation on investigate page scrolls to sections
+- Copy address button works with COPIED feedback
+- Server health indicator shows on home page
+- Cross-chain shows friendly message when Moralis rate limited
+- Mint result shows full snapshot details after minting
+- steps.txt has complete mainnet deployment guide
+
+WHAT HAS NOT BEEN TESTED:
+- Browser visual check of navigation and section nav
+- Mint function end-to-end on browser (server must be running)
+- Section nav intersection observer on actual scroll
+- Mobile layout with new navbar wrapping
+
+HUMAN CHECK:
+1. npm run dev, check navbar shows HOME and SNAPSHOTS links
+2. Navigate to investigate page, verify section nav bar appears
+3. Click section nav buttons, verify smooth scroll to sections
+4. Click the full wallet address, verify COPIED feedback
+5. Check home page shows server health indicator
+6. Deploy registry, mint a snapshot, verify full result card shows
+7. Test cross-chain when Moralis is rate-limited
+8. Check mobile layout: navbar wraps, section nav adjusts
+
+NEXT: Browser testing, or continue feature development
