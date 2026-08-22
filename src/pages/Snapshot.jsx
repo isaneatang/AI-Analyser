@@ -126,7 +126,8 @@ export default function Snapshot() {
       const normalized = timeValue.trim().replace(' ', 'T');
       const ts = Math.floor(new Date(normalized).getTime() / 1000);
       if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date/time (YYYY-MM-DD HH:MM).');
-      const res = await fetch(`/api/registry/snapshot-at?ts=${ts}`);
+      const walletParam = wallet ? `&wallet=${wallet}` : '';
+      const res = await fetch(`/api/registry/snapshot-at?ts=${ts}${walletParam}`);
       const data = await res.json();
       if (!res.ok) {
         setLookupError(data.error || 'Lookup failed.');

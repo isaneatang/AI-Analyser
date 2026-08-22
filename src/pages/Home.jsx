@@ -66,7 +66,7 @@ export default function Home() {
             HOW IT WORKS
           </p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', lineHeight: '1.7', textAlign: 'center' }}>
-            Enter a wallet address and the app pulls its full transaction history, token holdings, and counterparties directly from BOT Chain. AI then analyzes the data and produces a profile with an activity score and attention signals. You can mint a snapshot of the investigation as a soulbound NFT on-chain, creating a permanent timestamped record. Anyone can later look up what was known about a wallet at any point in time by querying the snapshot registry.
+            Enter a wallet address and the app pulls its full transaction history, token holdings, and counterparties directly from BOT Chain. AI then analyzes the data and produces a profile with an activity score and attention signals. You can mint a snapshot of the investigation as a soulbound NFT on-chain, creating a permanent timestamped record tied to that wallet. The snapshot page lets you browse all minted snapshots for a wallet and look up what the latest investigation found at any point in time.
           </p>
         </div>
         {serverStatus && (

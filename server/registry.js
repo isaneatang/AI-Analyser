@@ -90,17 +90,46 @@ router.get('/registry/snapshots/:wallet', async (req, res) => {
   res.json({ address: getRegistryAddress(), snapshots });
 });
 
-// GET /api/registry/snapshot-at?ts=<unixSeconds>
-// "Timestamp page": what was known at or before the given time.
+// GET /api/registry/snapshot-at?ts=<unixSeconds>&wallet=<address>
+// "Timestamp page": what was known about a wallet at or before the given time.
+// Filters by wallet so snapshots from other wallets are excluded.
 router.get('/registry/snapshot-at', async (req, res) => {
   const ts = Number(req.query.ts);
   if (!Number.isFinite(ts) || ts <= 0) {
     return res.status(400).json({ error: 'Provide a valid ts (unix seconds).' });
   }
+  const wallet = (req.query.wallet || '').toLowerCase();
+  if (wallet && !EVM_ADDRESS.test(wallet)) {
+    return res.status(400).json({ error: 'Invalid wallet address.' });
+  }
   if (!isRegistryConfigured()) {
     return res.status(503).json({ error: 'Registry contract not configured. Deploy and set REGISTRY_CONTRACT.' });
   }
 
+  // If a wallet is specified, filter to only that wallet's snapshots
+  // instead of using the global getSnapshotAtOrBefore which returns
+  // the closest snapshot across ALL wallets.
+  if (wallet) {
+    const snapshots = await getSnapshots(wallet);
+    if (snapshots === null) {
+      return res.status(500).json({ error: 'Failed to query snapshots.' });
+    }
+    // Find the snapshot with the largest timestamp at or before ts
+    let best = null;
+    let bestDelta = Infinity;
+    for (const s of snapshots) {
+      if (s.timestamp <= ts) {
+        const delta = ts - s.timestamp;
+        if (delta < bestDelta) {
+          bestDelta = delta;
+          best = s;
+        }
+      }
+    }
+    return res.json({ address: getRegistryAddress(), snapshot: best, found: !!best });
+  }
+
+  // No wallet specified: fall back to global lookup (backwards compat)
   const result = await getSnapshotAtOrBefore(ts);
   if (result === null) {
     return res.status(500).json({ error: 'Failed to query snapshots.' });
