@@ -52,8 +52,23 @@ export default function Home() {
             margin: '0 auto',
           }}
         >
-          Paste a BOT Chain wallet address to see its balance, full transaction history, token holdings, and counterparty breakdown — all explained by AI. Snapshots are soulbound NFTs minted on-chain, recording what was known about a wallet at a specific point in time.
+          Paste a BOT Chain wallet address and get a full breakdown of its activity on-chain.
         </p>
+        <div
+          style={{
+            marginTop: 'var(--space-lg)',
+            maxWidth: '520px',
+            margin: 'var(--space-lg) auto 0',
+            textAlign: 'left',
+          }}
+        >
+          <p className="mono" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--green-bright)', marginBottom: 'var(--space-sm)', textAlign: 'center' }}>
+            HOW IT WORKS
+          </p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', lineHeight: '1.7', textAlign: 'center' }}>
+            Enter a wallet address and the app pulls its full transaction history, token holdings, and counterparties directly from BOT Chain. AI then analyzes the data and produces a profile with an activity score and attention signals. You can mint a snapshot of the investigation as a soulbound NFT on-chain, creating a permanent timestamped record. Anyone can later look up what was known about a wallet at any point in time by querying the snapshot registry.
+          </p>
+        </div>
         {serverStatus && (
           <div
             className="mono"
