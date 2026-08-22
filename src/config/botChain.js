@@ -19,28 +19,25 @@ export const BOT_NETWORKS = {
       symbol: 'BOT',
       decimals: 18,
     },
-    // No verified explorer yet. Do not invent URLs.
-    blockExplorerUrl: null,
+    // No verified explorer yet. Abeg do not invent URLs.
+    blockExplorerUrl: 'https://scan.bohr.life',
   },
   mainnet: {
     key: 'mainnet',
-    // TODO(mainnet): set the real mainnet chain id when known.
-    chainId: 968,
+    chainId: 677,
     chainName: 'BOT Chain Mainnet',
-    // TODO(mainnet): set the real mainnet RPC URL when known.
-    rpcUrl: 'https://rpc.bohr.life',
+    rpcUrl: 'https://rpc.botchain.ai',
     nativeCurrency: {
       name: 'BOT',
       symbol: 'BOT',
       decimals: 18,
     },
-    // TODO(mainnet): set the mainnet explorer URL when available.
-    blockExplorerUrl: null,
+    blockExplorerUrl: 'https://scan.botchain.ai',
   },
 };
 
 //this toggles greatness
-export const ACTIVE_NETWORK_KEY = 'testnet'; // 'testnet' | 'mainnet'
+export const ACTIVE_NETWORK_KEY = 'mainnet'; // 'testnet' | 'mainnet'
 
 /** Active network object. All app code reads this. */
 export const BOT_CHAIN = BOT_NETWORKS[ACTIVE_NETWORK_KEY];

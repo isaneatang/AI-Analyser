@@ -11,15 +11,14 @@ const NETWORKS = {
     key: 'testnet',
     chainId: 968,
     chainName: 'BOT Chain Testnet',
-    // TODO(mainnet): real mainnet values when known.
     rpcUrl: process.env.BOT_TESTNET_RPC_URL || 'https://rpc.bohr.life',
     nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
   },
   mainnet: {
     key: 'mainnet',
-    chainId: 968,
+    chainId: 677,
     chainName: 'BOT Chain Mainnet',
-    rpcUrl: process.env.BOT_MAINNET_RPC_URL || 'https://rpc.bohr.life',
+    rpcUrl: process.env.BOT_MAINNET_RPC_URL || 'https://rpc.botchain.ai',
     nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
   },
 };

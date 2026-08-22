@@ -1,6 +1,6 @@
 /**
  * scripts/deploy-registry.js - Compile and deploy InvestigationRegistry.sol
- * to BOT Chain Testnet.
+ * to BOT Chain Mainnet.
  *
  * Usage:
  *   1. Set BOT_RPC_URL and BOT_PRIVATE_KEY (a funded BOT Chain key) in .env.
@@ -51,10 +51,10 @@ console.log(`[deploy] Compiled InvestigationRegistry.sol (${bytecode.length / 2}
 
 // 2. Deploy
 const botChain = defineChain({
-  id: 968,
-  name: 'BOT Chain Testnet',
+  id: 677,
+  name: 'BOT Chain Mainnet',
   nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
-  rpcUrls: { default: { http: [RPC_URL] } },
+  rpcUrls: { default: { http: ['https://rpc.botchain.ai'] } },
 });
 
 const walletClient = createWalletClient({
