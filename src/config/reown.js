@@ -1,6 +1,6 @@
 /**
  * Reown AppKit + Wagmi configuration.
- * Sets up wallet connection with BOT Chain Testnet as the primary network.
+ * Sets up wallet connection with the active BOT Chain network as the primary network.
  * When VITE_REOWN_PROJECT_ID is missing, exports null values and logs a warning.
  * The app continues to work; wallet connection just won't be available.
  */

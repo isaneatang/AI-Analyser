@@ -26,7 +26,9 @@ export function getRecentInvestigations() {
  * @param {string} address - The wallet address investigated.
  * @param {string} network - The network name.
  */
-export function saveRecentInvestigation(address, network = 'BOT Chain Testnet') {
+import { BOT_CHAIN } from '../config/botChain';
+
+export function saveRecentInvestigation(address, network = BOT_CHAIN.chainName) {
   try {
     const recent = getRecentInvestigations().filter(
       (r) => r.address.toLowerCase() !== address.toLowerCase()

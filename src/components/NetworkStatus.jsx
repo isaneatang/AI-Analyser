@@ -1,7 +1,7 @@
 /**
  * NetworkStatus - Shows current network connection status.
  * Reflects real chain state from wallet context.
- * Shows BOT Chain Testnet when connected to chain 968.
+ * Shows the active BOT Chain network name when connected.
  * Shows Wrong Network when connected to a different chain.
  * Shows Offline when no wallet is connected.
  */

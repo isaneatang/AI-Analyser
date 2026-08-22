@@ -122,8 +122,10 @@ export default function Snapshot() {
     setLookupError(null);
     setLookup(null);
     try {
-      const ts = Math.floor(new Date(timeValue).getTime() / 1000);
-      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date/time.');
+      // Accept both 'YYYY-MM-DDTHH:MM' and 'YYYY-MM-DD HH:MM' formats
+      const normalized = timeValue.trim().replace(' ', 'T');
+      const ts = Math.floor(new Date(normalized).getTime() / 1000);
+      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date/time (YYYY-MM-DD HH:MM).');
       const res = await fetch(`/api/registry/snapshot-at?ts=${ts}`);
       const data = await res.json();
       if (!res.ok) {
@@ -199,11 +201,12 @@ export default function Snapshot() {
         <h2 className="section-title">What Was Known At a Time</h2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)', alignItems: 'center' }}>
           <input
-            type="datetime-local"
+            type="text"
             className="input"
+            placeholder="YYYY-MM-DD HH:MM"
             value={timeValue}
             onChange={(e) => setTimeValue(e.target.value)}
-            style={{ flex: 1, minWidth: '220px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)', colorScheme: 'dark' }}
+            style={{ flex: 1, minWidth: '220px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
           />
           <button className="btn btn-primary" onClick={handleTimestampLookup} disabled={looking || !timeValue}>
             {looking ? 'SEARCHING...' : 'FIND SNAPSHOT'}
