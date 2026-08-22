@@ -52,7 +52,7 @@ export default function Home() {
             margin: '0 auto',
           }}
         >
-          Paste a BOT Chain wallet address to see its balance, full transaction history, token holdings, and counterparty breakdown — all explained by AI. Snapshots capture a wallet at a specific point in time, and anyone with the link can view the result.
+          Paste a BOT Chain wallet address to see its balance, full transaction history, token holdings, and counterparty breakdown — all explained by AI. Snapshots are soulbound NFTs minted on-chain, recording what was known about a wallet at a specific point in time.
         </p>
         {serverStatus && (
           <div
