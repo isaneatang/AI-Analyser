@@ -1,8 +1,8 @@
 /**
  * api/config/network.js - Server-side BOT Chain network configuration.
  * Mirrors src/config/botChain.js for the backend. The active network is chosen
- * by the BOT_NETWORK env var ('testnet' default, or 'mainnet'), so moving to
- * mainnet is a one-line change in .env. Individual values can be overridden
+ * by the BOT_NETWORK env var ('mainnet' default, or 'testnet'). Set BOT_NETWORK
+ * to 'testnet' in .env to switch. Individual values can be overridden
  * with BOT_RPC_URL / BOT_TESTNET_RPC_URL / BOT_MAINNET_RPC_URL.
  */
 
@@ -24,7 +24,7 @@ const NETWORKS = {
 };
 
 /** Active network key: 'testnet' | 'mainnet'. Override via BOT_NETWORK. */
-export const NETWORK_KEY = process.env.BOT_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+export const NETWORK_KEY = process.env.BOT_NETWORK === 'testnet' ? 'testnet' : 'mainnet';
 
 export const NETWORK_CONFIG = NETWORKS[NETWORK_KEY];
 

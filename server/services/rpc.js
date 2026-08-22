@@ -1,6 +1,6 @@
 /**
  * BOT Chain RPC service.
- * Direct RPC communication with BOT Chain Testnet.
+ * Direct RPC communication with BOT Chain.
  * Used when Moralis doesn't provide required data:
  * - specific transaction receipt
  * - contract information

@@ -56,7 +56,7 @@ export function getBotChain(key) {
  * Used when the wallet does not already have the active network configured.
  */
 export const ADD_CHAIN_PARAMS = {
-  chainId: `0x${BOT_CHAIN.chainId.toString(16)}`, // 0x3C8 for testnet
+  chainId: `0x${BOT_CHAIN.chainId.toString(16)}`,
   chainName: BOT_CHAIN.chainName,
   rpcUrls: [BOT_CHAIN.rpcUrl],
   nativeCurrency: BOT_CHAIN.nativeCurrency,

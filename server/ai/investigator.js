@@ -7,6 +7,7 @@
 
 import { askGemini, isGeminiAvailable } from '../services/gemini.js';
 import { INVESTIGATION_PROMPT, CHAT_PROMPT, TRANSACTION_PROMPT } from './prompts.js';
+import { NETWORK_CONFIG } from '../config/network.js';
 
 /**
  * Create a compact evidence summary for AI analysis.
@@ -20,7 +21,7 @@ function createEvidencePackage(investigation) {
   const lines = [];
 
   lines.push(`Wallet: ${overview.address}`);
-  lines.push(`Network: BOT Chain Testnet (chain 968)`);
+  lines.push(`Network: ${NETWORK_CONFIG.chainName} (chain ${NETWORK_CONFIG.chainId})`);
   lines.push(`Balance: ${overview.balanceFormatted} BOT`);
   lines.push(`Transactions found: ${overview.transactionCount}`);
   lines.push(`Token transfers found: ${overview.tokenTransferCount}`);
