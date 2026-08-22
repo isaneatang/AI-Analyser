@@ -10,6 +10,7 @@ import WalletSearch from '../components/WalletSearch';
 import { getRecentInvestigations } from '../utils/storage';
 import { shortenAddress } from '../utils/address';
 import { timeAgo } from '../utils/format';
+import { BOT_CHAIN } from '../config/botChain';
 
 export default function Home() {
   const [recent, setRecent] = useState([]);
@@ -51,7 +52,7 @@ export default function Home() {
             margin: '0 auto',
           }}
         >
-          Investigate BOT Chain wallets using real blockchain data and AI analysis.
+          Paste a BOT Chain wallet address to see its balance, full transaction history, token holdings, and counterparty breakdown — all explained by AI.
         </p>
         {serverStatus && (
           <div
@@ -91,7 +92,7 @@ export default function Home() {
         </div>
 
         <p className="terminal-boot">
-          <span className="ok">&gt; BOT CHAIN ONLINE</span> :: chain 968 :: rpc.bohr.life
+          <span className="ok">&gt; BOT CHAIN ONLINE</span> :: chain {BOT_CHAIN.chainId} :: {new URL(BOT_CHAIN.rpcUrl).hostname}
         </p>
 
         <WalletSearch />
