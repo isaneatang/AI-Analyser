@@ -11,7 +11,7 @@
  * Does NOT contain: Moralis calls, Gemini calls, analysis logic
  */
 
-import { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { isBotChainId, ADD_CHAIN_PARAMS, BOT_CHAIN } from '../config/botChain';
 
@@ -27,18 +27,49 @@ export function WalletProvider({ children }) {
 
   const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
   const [networkError, setNetworkError] = useState(null);
+  // Live chain id read straight from the injected provider. wagmi's tracked
+  // chain can lag or stay undefined (WalletConnect sessions, stale AppKit
+  // storage), which made the app prompt "switch to mainnet" while the
+  // wallet was ALREADY on mainnet. The provider itself is the source of
+  // truth for browser wallets.
+  const [injectedChainId, setInjectedChainId] = useState(null);
+  // One automatic switch attempt per wrong-network episode; without this a
+  // lagging wagmi state re-triggered the wallet popup in a loop.
+  const autoSwitchAttemptRef = useRef(false);
 
-  const chainId = chain?.id || null;
+  useEffect(() => {
+    const eth = window.ethereum;
+    if (!eth) return undefined;
+    const read = () => {
+      try {
+        if (eth.chainId) setInjectedChainId(parseInt(eth.chainId, 16));
+      } catch {
+        // ignore malformed values; wagmi chain remains the fallback
+      }
+    };
+    read();
+    eth.on?.('chainChanged', read);
+    return () => {
+      eth.removeListener?.('chainChanged', read);
+    };
+  }, []);
+
+  const wagmiChainId = chain?.id || null;
+  const chainId = injectedChainId ?? wagmiChainId;
   const isOnBotChain = chainId ? isBotChainId(chainId) : false;
   const isWrongNetwork = isConnected && !isOnBotChain;
 
   /**
    * Detect the wallet's current network.
+   * Prefers the synchronous .chainId property, falls back to an
+   * eth_chainId request for providers that only expose it async.
    * @returns {Promise<number|null>} Current chain ID as a number, or null.
    */
   const detectCurrentChainId = useCallback(async () => {
     try {
       if (window.ethereum?.chainId) return parseInt(window.ethereum.chainId, 16);
+      const hex = await window.ethereum?.request?.({ method: 'eth_chainId' });
+      if (hex) return parseInt(hex, 16);
     } catch {
       // fall through
     }
@@ -69,6 +100,9 @@ export function WalletProvider({ children }) {
     try {
       const currentChainId = await detectCurrentChainId();
       if (currentChainId === BOT_CHAIN.chainId) {
+        // Wallet is already on the BOT chain - wagmi state was just stale.
+        setInjectedChainId(currentChainId);
+        setNetworkError(null);
         setIsSwitchingNetwork(false);
         return true;
       }
@@ -116,12 +150,24 @@ export function WalletProvider({ children }) {
     }
   }, [detectCurrentChainId]);
 
-  // Auto-switch to BOT Chain when connected to wrong network
+  // Auto-switch to BOT Chain when connected to wrong network.
+  // Guarded: at most one automatic attempt per wrong-network episode, so a
+  // lagging wagmi chain state cannot loop the wallet's switch popup.
   useEffect(() => {
-    if (isConnected && isWrongNetwork && !isSwitchingNetwork && !networkError) {
+    if (isOnBotChain || !isConnected) {
+      autoSwitchAttemptRef.current = false;
+    }
+    if (
+      isConnected &&
+      isWrongNetwork &&
+      !autoSwitchAttemptRef.current &&
+      !isSwitchingNetwork &&
+      !networkError
+    ) {
+      autoSwitchAttemptRef.current = true;
       switchToBotChain();
     }
-  }, [isConnected, isWrongNetwork]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isConnected, isWrongNetwork, isOnBotChain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear error when on correct chain
   useEffect(() => {

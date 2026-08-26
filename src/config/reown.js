@@ -11,13 +11,24 @@ import { BOT_CHAIN } from './botChain';
 
 const projectId = import.meta.env.VITE_REOWN_PROJECT_ID;
 
+// Canonical viem/AppKit network shape. The previous hand-rolled object
+// ({currency: 'BOT', rpcUrl}) left nativeCurrency/rpcUrls undefined inside
+// the adapter, so wallet_addEthereumChain / switch requests were built with
+// invalid params and the app kept re-prompting the network switch.
 const botChainNetwork = {
   id: BOT_CHAIN.chainId,
   name: BOT_CHAIN.chainName,
-  currency: BOT_CHAIN.nativeCurrency.name,
-  explorerUrl: BOT_CHAIN.blockExplorerUrl || '',
-  rpcUrl: BOT_CHAIN.rpcUrl,
-  imageUrl: '',
+  nativeCurrency: {
+    name: BOT_CHAIN.nativeCurrency.name,
+    symbol: BOT_CHAIN.nativeCurrency.symbol,
+    decimals: BOT_CHAIN.nativeCurrency.decimals,
+  },
+  rpcUrls: {
+    default: { http: [BOT_CHAIN.rpcUrl] },
+  },
+  blockExplorers: BOT_CHAIN.blockExplorerUrl
+    ? { default: { name: 'Scan', url: BOT_CHAIN.blockExplorerUrl } }
+    : undefined,
 };
 
 export const isReownConfigured = !!projectId;
