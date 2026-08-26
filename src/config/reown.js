@@ -36,8 +36,11 @@ if (!projectId) {
     wagmiAdapter = new WagmiAdapter({
       networks: [botChainNetwork],
       projectId,
+      // Keyed by CAIP id ('eip155:<chainId>') with {url} objects - the
+      // adapter ignores other shapes, which used to leave the wagmi public
+      // client without any transport (receipt polling never confirmed).
       customRpcUrls: {
-        [BOT_CHAIN.chainId]: [BOT_CHAIN.rpcUrl],
+        [`eip155:${BOT_CHAIN.chainId}`]: [{ url: BOT_CHAIN.rpcUrl }],
       },
     });
 

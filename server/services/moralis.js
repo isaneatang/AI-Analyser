@@ -148,7 +148,121 @@ export async function getWalletBalance(address) {
 }
 
 /**
+ * Find block ranges inside a recent window where the wallet SENT
+ * transactions.
+ *
+ * Native BOT transfers and contract calls never emit ERC-20 Transfer logs,
+ * so the log scan above cannot see them: active wallets showed only their
+ * balance and age while transactions stayed empty. The nonce
+ * (eth_getTransactionCount) grows monotonically with every send, so any
+ * block interval whose end-nonce exceeds its start-nonce contains sends.
+ *
+ * A depth-first search - always descending into the NEWER half first -
+ * narrows such intervals down to small terminal ranges (<= REGION_WIDTH
+ * blocks). Callers expand terminals into concrete blocks/transactions.
+ * Newest-first matters: the UI lists recent activity, and a wallet with
+ * thousands of sends would otherwise burn the entire budget before the
+ * first hit was isolated. Sibling intervals are queried in parallel rounds
+ * to keep wall-clock time near depth x latency rather than calls x latency.
+ *
+ * Bounded by MAX_COUNT_CALLS RPC round-trips and MAX_TERMINALS results so
+ * a million-send wallet cannot stall the investigation (older sends beyond
+ * the caps are simply not listed - same trade-off as the 60-hash log cap).
+ * @param {string} address - Wallet address.
+ * @param {number} maxBlocks - Size of the recent window in blocks.
+ * @returns {Promise<Array<{lo:number,hi:number}>>} Terminal ranges (ascending).
+ */
+const MAX_COUNT_CALLS = 168;
+const COUNT_CONCURRENCY = 12;
+const REGION_WIDTH = 32;
+const MAX_TERMINALS = 8;
+
+export async function getRecentSentBlocks(address, maxBlocks = 200000) {
+  const key = address.toLowerCase();
+  try {
+    const latest = await getLatestBlock();
+    const start = Math.max(0, latest - maxBlocks);
+    if (latest <= start) return [];
+
+    let calls = 0;
+    async function countAt(b) {
+      calls++;
+      const hex = await rpcWithRetry('eth_getTransactionCount', [key, `0x${b.toString(16)}`]);
+      return hex ? parseInt(hex, 16) : 0;
+    }
+
+    const endNonce = await countAt(latest);
+    if (endNonce === 0) return []; // never sent anything
+    const startNonce = await countAt(start);
+    if (endNonce === startNonce) return []; // no sends inside the window
+
+    // Stack entries are intervals [lo, hi] known to contain nHi - nLo sends.
+    // Popping newest-first keeps the search on recent activity.
+    let stack = [{ lo: start, nLo: startNonce, hi: latest, nHi: endNonce }];
+    const terminals = [];
+
+    while (stack.length > 0 && terminals.length < MAX_TERMINALS && calls < MAX_COUNT_CALLS) {
+      // Take up to CONCURRENCY splittable intervals per round, newest first.
+      stack.sort((a, b) => b.hi - a.hi);
+      const batch = [];
+      const rest = [];
+      for (const iv of stack) {
+        if (
+          batch.length < COUNT_CONCURRENCY &&
+          iv.hi - iv.lo > REGION_WIDTH &&
+          iv.nHi > iv.nLo &&
+          calls + batch.length < MAX_COUNT_CALLS
+        ) {
+          batch.push(iv);
+        } else {
+          rest.push(iv);
+        }
+      }
+      stack = rest;
+
+      const mids = batch.map((iv) => (iv.lo + iv.hi) >> 1);
+      const counts = await Promise.all(
+        mids.map((b) => countAt(b).catch(() => null))
+      );
+
+      batch.forEach((iv, i) => {
+        const midN = counts[i];
+        const mid = mids[i];
+        // An unparseable mid requeues its parent interval unchanged.
+        if (midN === null || midN === undefined) {
+          stack.push(iv);
+          return;
+        }
+        if (midN > iv.nLo) stack.push({ lo: iv.lo, nLo: iv.nLo, hi: mid, nHi: midN });
+        if (iv.nHi > midN) stack.push({ lo: mid, nLo: midN, hi: iv.hi, nHi: iv.nHi });
+      });
+
+      // Harvest intervals refined down to terminal size.
+      const stillQueued = [];
+      for (const iv of stack) {
+        if (iv.nHi <= iv.nLo) continue;
+        if (iv.hi - iv.lo <= REGION_WIDTH) {
+          terminals.push({ lo: iv.lo, hi: iv.hi });
+          if (terminals.length >= MAX_TERMINALS) break;
+        } else {
+          stillQueued.push(iv);
+        }
+      }
+      stack = stillQueued;
+    }
+
+    return terminals.sort((a, b) => a.lo - b.lo);
+  } catch (err) {
+    console.error('[rpc] getRecentSentBlocks error:', err.message);
+    return [];
+  }
+}
+
+/**
  * Get transactions involving the address using eth_getLogs.
+ * ERC-20 Transfer logs are the primary source; recent NATIVE sends are
+ * merged in via getRecentSentBlocks() so wallets that only move BOT are
+ * not reported as empty.
  */
 export async function getWalletTransactions(address, maxBlocks = 50000) {
   try {
@@ -157,22 +271,71 @@ export async function getWalletTransactions(address, maxBlocks = 50000) {
     const txHashes = new Set();
     const chunkSize = 5000;
 
-    for (let offset = chunkSize; offset < maxBlocks; offset += chunkSize) {
-      const end = latest - offset + chunkSize;
-      const start = Math.max(0, latest - offset);
-      const fromHex = `0x${start.toString(16)}`;
-      const toHex = `0x${end.toString(16)}`;
+    // Scan chunks in small parallel batches. Serial scanning took ~30s for
+    // wallets with no ERC-20 history (every chunk visited before giving up),
+    // which alone pushed investigations past the serverless timeout.
+    const PAR_CHUNKS = 5;
+    for (let offset = chunkSize; offset < maxBlocks; offset += chunkSize * PAR_CHUNKS) {
+      const ranges = [];
+      for (let k = 0; k < PAR_CHUNKS && offset + k * chunkSize < maxBlocks; k++) {
+        const off = offset + k * chunkSize;
+        const end = latest - off + chunkSize;
+        const start = Math.max(0, latest - off);
+        ranges.push({
+          fromBlock: `0x${start.toString(16)}`,
+          toBlock: `0x${end.toString(16)}`,
+        });
+      }
 
-      const [incoming, outgoing] = await Promise.all([
-        rpcWithRetry('eth_getLogs', [{ fromBlock: fromHex, toBlock: toHex, topics: [TRANSFER_TOPIC, null, padded] }]).catch(() => []),
-        rpcWithRetry('eth_getLogs', [{ fromBlock: fromHex, toBlock: toHex, topics: [TRANSFER_TOPIC, padded, null] }]).catch(() => []),
-      ]);
+      const scanned = await Promise.all(
+        ranges.map((range) =>
+          Promise.all([
+            rpcWithRetry('eth_getLogs', [{ ...range, topics: [TRANSFER_TOPIC, null, padded] }]).catch(() => []),
+            rpcWithRetry('eth_getLogs', [{ ...range, topics: [TRANSFER_TOPIC, padded, null] }]).catch(() => []),
+          ])
+        )
+      );
 
-      for (const log of [...(incoming || []), ...(outgoing || [])]) {
-        if (log.transactionHash) txHashes.add(log.transactionHash);
+      for (const [incoming, outgoing] of scanned) {
+        for (const log of [...(incoming || []), ...(outgoing || [])]) {
+          if (log.transactionHash) txHashes.add(log.transactionHash);
+        }
       }
 
       if (txHashes.size >= 100) break;
+    }
+
+    // Merge recent native sends (invisible to Transfer-log scans).
+    const terminals = await getRecentSentBlocks(address, maxBlocks);
+    if (terminals.length > 0) {
+      // Expand terminal ranges into concrete blocks, newest range first,
+      // capped so a dense burst cannot flood the detail pipeline.
+      const blockNums = [];
+      const MAX_SENT_BLOCK_FETCHES = 80;
+      for (let i = terminals.length - 1; i >= 0 && blockNums.length < MAX_SENT_BLOCK_FETCHES; i--) {
+        const { lo, hi } = terminals[i];
+        for (let b = Math.min(hi, lo + 1 + (MAX_SENT_BLOCK_FETCHES - blockNums.length) - 1); b >= lo; b--) {
+          blockNums.push(b);
+          if (blockNums.length >= MAX_SENT_BLOCK_FETCHES) break;
+        }
+      }
+
+      for (let i = 0; i < blockNums.length; i += 8) {
+        const batch = blockNums.slice(i, i + 8);
+        const blocks = await Promise.allSettled(
+          batch.map((b) => rpcWithRetry('eth_getBlockByNumber', [`0x${b.toString(16)}`, true]))
+        );
+        for (const r of blocks) {
+          const block = r.status === 'fulfilled' ? r.value : null;
+          for (const t of block?.transactions || []) {
+            if ((t.from || '').toLowerCase() === address.toLowerCase() && t.hash) {
+              txHashes.add(t.hash);
+            }
+          }
+        }
+        // Enough candidates already - stop fetching older blocks.
+        if (txHashes.size >= 100) break;
+      }
     }
 
     const hashes = [...txHashes].slice(0, 60);
@@ -258,36 +421,50 @@ export async function getTokenTransfers(address, maxBlocks = 50000) {
     const transfers = [];
     const chunkSize = 5000;
 
-    for (let offset = chunkSize; offset < maxBlocks; offset += chunkSize) {
-      const end = latest - offset + chunkSize;
-      const start = Math.max(0, latest - offset);
-      const fromHex = `0x${start.toString(16)}`;
-      const toHex = `0x${end.toString(16)}`;
-
-      const [incoming, outgoing] = await Promise.all([
-        rpcWithRetry('eth_getLogs', [{ fromBlock: fromHex, toBlock: toHex, topics: [TRANSFER_TOPIC, null, padded] }]).catch(() => []),
-        rpcWithRetry('eth_getLogs', [{ fromBlock: fromHex, toBlock: toHex, topics: [TRANSFER_TOPIC, padded, null] }]).catch(() => []),
-      ]);
-
-      for (const log of [...(incoming || []), ...(outgoing || [])]) {
-        const blockNum = parseInt(log.blockNumber, 16);
-        const ts = await getBlockTimestamp(blockNum);
-
-        // Fetch token metadata
-        const meta = await getTokenMetadata(log.address);
-
-        transfers.push({
-          transaction_hash: log.transactionHash,
-          from: log.topics[1] ? '0x' + log.topics[1].slice(26) : null,
-          to: log.topics[2] ? '0x' + log.topics[2].slice(26) : null,
-          value: (log.data && log.data !== '0x') ? BigInt(log.data).toString() : '0',
-          address: log.address,
-          block_number: blockNum.toString(),
-          block_timestamp: ts,
-          token_name: meta.name,
-          token_symbol: meta.symbol,
-          token_decimals: meta.decimals.toString(),
+    // Parallel batches, same rationale as getWalletTransactions above.
+    const PAR_CHUNKS = 5;
+    for (let offset = chunkSize; offset < maxBlocks; offset += chunkSize * PAR_CHUNKS) {
+      const ranges = [];
+      for (let k = 0; k < PAR_CHUNKS && offset + k * chunkSize < maxBlocks; k++) {
+        const off = offset + k * chunkSize;
+        const end = latest - off + chunkSize;
+        const start = Math.max(0, latest - off);
+        ranges.push({
+          fromBlock: `0x${start.toString(16)}`,
+          toBlock: `0x${end.toString(16)}`,
         });
+      }
+
+      const scanned = await Promise.all(
+        ranges.map((range) =>
+          Promise.all([
+            rpcWithRetry('eth_getLogs', [{ ...range, topics: [TRANSFER_TOPIC, null, padded] }]).catch(() => []),
+            rpcWithRetry('eth_getLogs', [{ ...range, topics: [TRANSFER_TOPIC, padded, null] }]).catch(() => []),
+          ])
+        )
+      );
+
+      for (const [incoming, outgoing] of scanned) {
+        for (const log of [...(incoming || []), ...(outgoing || [])]) {
+          const blockNum = parseInt(log.blockNumber, 16);
+          const ts = await getBlockTimestamp(blockNum);
+
+          // Fetch token metadata
+          const meta = await getTokenMetadata(log.address);
+
+          transfers.push({
+            transaction_hash: log.transactionHash,
+            from: log.topics[1] ? '0x' + log.topics[1].slice(26) : null,
+            to: log.topics[2] ? '0x' + log.topics[2].slice(26) : null,
+            value: (log.data && log.data !== '0x') ? BigInt(log.data).toString() : '0',
+            address: log.address,
+            block_number: blockNum.toString(),
+            block_timestamp: ts,
+            token_name: meta.name,
+            token_symbol: meta.symbol,
+            token_decimals: meta.decimals.toString(),
+          });
+        }
       }
 
       if (transfers.length >= 50) break;
@@ -296,7 +473,7 @@ export async function getTokenTransfers(address, maxBlocks = 50000) {
     return { transfers, cursor: null };
   } catch (err) {
     console.error('[rpc] getTokenTransfers error:', err.message);
-    return { transfers: [], cursor: null };
+    return { transfers, cursor: null };
   }
 }
 

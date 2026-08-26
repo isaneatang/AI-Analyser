@@ -198,6 +198,10 @@ See `steps.txt` for detailed deployment instructions.
 - Mainnet RPC / chain id not set yet (fill in `src/config/botChain.js` +
   `.env` when moving to mainnet)
 - Mobile wallet behavior varies by wallet app
+- Native (non-token) transfers are found by a budgeted nonce search over
+  the recent block window, so only the newest sends of extremely active
+  wallets are listed; incoming native transfers without token events are
+  not indexed by the RPC and stay invisible
 
 ## Future Work
 

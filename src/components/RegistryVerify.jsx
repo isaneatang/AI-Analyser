@@ -13,6 +13,7 @@ import { getReportHash, buildReportMarkdown } from '../utils/report';
 import { shortenAddress } from '../utils/address';
 import { formatDate } from '../utils/format';
 import { REGISTRY_ABI } from '../../shared/registryAbi';
+import { BOT_CHAIN } from '../config/botChain';
 
 /**
  * @param {Object} props
@@ -24,6 +25,7 @@ export default function RegistryVerify({ investigation }) {
   const [message, setMessage] = useState(null);
   const [mintResult, setMintResult] = useState(null);
   const [pendingAction, setPendingAction] = useState(null); // 'anchor' | 'mint'
+  const [fallbackConfirmed, setFallbackConfirmed] = useState(false);
 
   const { address: connectedAddress, isConnected } = useWallet();
 
@@ -37,10 +39,51 @@ export default function RegistryVerify({ investigation }) {
   // wagmi write contract hooks
   const { writeContract, data: txHash, isPending, error: txError } = useWriteContract();
 
-  // Wait for transaction confirmation
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+  // Wait for transaction confirmation. chainId is pinned to BOT Chain so the
+  // receipt is polled on the right public client even if wagmi's tracked
+  // connected chain differs.
+  const { isLoading: isConfirming, isSuccess: hookConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
+    chainId: BOT_CHAIN.chainId,
   });
+  const isConfirmed = hookConfirmed || fallbackConfirmed;
+
+  // Fallback receipt polling straight against the BOT RPC. The wagmi hook
+  // depends on the app-side transport; if it ever stalls again this still
+  // resolves the UI once the transaction has actually mined.
+  useEffect(() => {
+    if (!txHash || isConfirmed) return undefined;
+    let cancelled = false;
+    const startedAt = Date.now();
+    const timer = setInterval(async () => {
+      if (cancelled) return;
+      if (Date.now() - startedAt > 120000) {
+        cancelled = true;
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const res = await fetch(BOT_CHAIN.rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          }),
+        });
+        const data = await res.json();
+        if (!cancelled && data?.result?.blockNumber) setFallbackConfirmed(true);
+      } catch {
+        // keep polling
+      }
+    }, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [txHash, isConfirmed]);
 
   // Load registry status + existing reports
   useEffect(() => {
@@ -123,6 +166,7 @@ export default function RegistryVerify({ investigation }) {
     }
     setMessage(null);
     setPendingAction('anchor');
+    setFallbackConfirmed(false);
     // BOT Chain RPC rejects EIP-1559 (type 0x2); force legacy (type 0x0).
     writeContract({
       address: status.address,
@@ -141,6 +185,7 @@ export default function RegistryVerify({ investigation }) {
     setMessage(null);
     setPendingAction('mint');
     setMintResult(null);
+    setFallbackConfirmed(false);
     // BOT Chain RPC rejects EIP-1559 (type 0x2); force legacy (type 0x0).
     writeContract({
       address: status.address,
