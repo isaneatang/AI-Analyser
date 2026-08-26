@@ -48,9 +48,16 @@ export default function AIProfile({ investigation, embedded = false }) {
   if (loading) {
     return wrap(
       <div>
-        <p className="mono text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
-          Generating AI analysis...
-        </p>
+        <div className="ai-generating">
+          <span className="ai-generating-dots" aria-hidden="true">
+            <span className="ai-generating-dot" />
+            <span className="ai-generating-dot" />
+            <span className="ai-generating-dot" />
+          </span>
+          <p className="mono text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
+            Generating AI analysis...
+          </p>
+        </div>
         <p className="text-muted" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-xs)' }}>
           Gemini is analyzing the wallet evidence.
         </p>

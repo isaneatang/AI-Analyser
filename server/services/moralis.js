@@ -168,6 +168,9 @@ export async function getWalletBalance(address) {
  * Bounded by MAX_COUNT_CALLS RPC round-trips and MAX_TERMINALS results so
  * a million-send wallet cannot stall the investigation (older sends beyond
  * the caps are simply not listed - same trade-off as the 60-hash log cap).
+ * When the recent window contains no sends at all, the span widens back to
+ * the wallet's earliest send (cached from the age search) so dormant
+ * wallets still show their history instead of zero transactions.
  * @param {string} address - Wallet address.
  * @param {number} maxBlocks - Size of the recent window in blocks.
  * @returns {Promise<Array<{lo:number,hi:number}>>} Terminal ranges (ascending).
@@ -193,12 +196,26 @@ export async function getRecentSentBlocks(address, maxBlocks = 200000) {
 
     const endNonce = await countAt(latest);
     if (endNonce === 0) return []; // never sent anything
-    const startNonce = await countAt(start);
-    if (endNonce === startNonce) return []; // no sends inside the window
+
+    // Widen the search span when the recent window has no sends: wallets
+    // whose last send predates the window (but which have an on-chain
+    // history) would otherwise still report zero transactions. The earliest
+    // send block comes from the same cached binary search that powers the
+    // wallet-age calculation, so this is usually free.
+    let lo = start;
+    let loNonce = await countAt(start);
+    if (endNonce === loNonce) {
+      const earliest = await getEarliestSentBlock(address);
+      if (earliest === null || earliest === undefined) return [];
+      lo = Math.max(0, Number(earliest) - 1);
+      if (lo >= latest) return [];
+      loNonce = await countAt(lo);
+      if (endNonce === loNonce) return [];
+    }
 
     // Stack entries are intervals [lo, hi] known to contain nHi - nLo sends.
     // Popping newest-first keeps the search on recent activity.
-    let stack = [{ lo: start, nLo: startNonce, hi: latest, nHi: endNonce }];
+    let stack = [{ lo, nLo: loNonce, hi: latest, nHi: endNonce }];
     const terminals = [];
 
     while (stack.length > 0 && terminals.length < MAX_TERMINALS && calls < MAX_COUNT_CALLS) {
@@ -249,6 +266,19 @@ export async function getRecentSentBlocks(address, maxBlocks = 200000) {
         }
       }
       stack = stillQueued;
+    }
+
+    // Budget exhausted before every interval reached terminal size. Drain
+    // the remaining live intervals as wide terminals anyway - each is
+    // guaranteed to contain at least one send - newest first, so the block
+    // expansion below finds the most recent activity first instead of
+    // reporting nothing.
+    if (terminals.length < MAX_TERMINALS && stack.length > 0) {
+      stack.sort((a, b) => b.hi - a.hi);
+      for (const iv of stack) {
+        if (terminals.length >= MAX_TERMINALS) break;
+        terminals.push({ lo: iv.lo, hi: iv.hi });
+      }
     }
 
     return terminals.sort((a, b) => a.lo - b.lo);
