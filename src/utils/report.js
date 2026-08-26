@@ -49,7 +49,7 @@ export function buildReportMarkdown(investigation) {
 
   // Overview
   h('Wallet Overview');
-  p(`- Balance: ${formatTokenAmount(overview?.balance)} BOT`);
+  p(`- Balance: ${formatTokenAmount(overview?.balance)} BOT${overview?.balanceUsd != null ? ` (~$${Number(overview.balanceUsd).toFixed(2)})` : ''}`);
   p(`- Transactions: ${overview?.transactionCount ?? 0}`);
   p(`- Token Transfers: ${overview?.tokenTransferCount ?? 0}`);
   p(`- Tokens Held: ${overview?.tokenCount ?? 0}`);

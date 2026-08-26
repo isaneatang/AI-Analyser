@@ -4,7 +4,7 @@
  * Includes token metadata fetching (name, symbol, decimals).
  */
 
-import { BOT_RPC_URL } from '../config/network.js';
+import { BOT_RPC_URL, NETWORK_KEY } from '../config/network.js';
 
 const RPC_URL = BOT_RPC_URL;
 let rpcId = 1;
@@ -672,7 +672,21 @@ export async function getFirstActivity(address) {
 
 /**
  * Get ERC-20 token balances with metadata.
+ *
+ * Discovery scans recent blocks for incoming Transfer logs, which misses
+ * tokens acquired outside that window (e.g. bridged USDT sitting in the
+ * wallet for months). KNOWN_TOKENS are always balanceOf'd as well so
+ * established holdings show up regardless of when they arrived. Only
+ * non-zero balances are returned.
  */
+
+// BOT Chain MAINNET token contracts worth checking unconditionally.
+const KNOWN_TOKENS_MAINNET = new Set([
+  '0xababc7ddc03e501d190c676bf3d92ef0e6e87a3c', // USDT (bridged Tether)
+  '0x68caea9104419203cf8b8f0b222e75709b97bfc6', // WBOT (wrapped BOT)
+  '0xd5452816194a3784dba983426cce7c122f4abd30', // WBOT v2 pool token
+]);
+
 export async function getTokenBalances(address) {
   try {
     const latest = await getLatestBlock();
@@ -694,6 +708,11 @@ export async function getTokenBalances(address) {
         tokenAddrs = [...new Set(logs.map((l) => l.address))];
         break;
       }
+    }
+
+    // Merge in known tokens (mainnet only) so old holdings are not missed.
+    if (NETWORK_KEY === 'mainnet') {
+      tokenAddrs = [...new Set([...tokenAddrs, ...KNOWN_TOKENS_MAINNET])];
     }
 
     if (tokenAddrs.length === 0) return [];

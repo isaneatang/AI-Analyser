@@ -72,14 +72,17 @@ router.post('/investigate', async (req, res) => {
       .map((t) => t.contractAddress)
       .filter(Boolean);
 
-    let priceData = {};
-    if (tokenAddresses.length > 0) {
-      priceData = await getTokenPrices(tokenAddresses).catch(() => ({}));
-    }
+    const [priceData, botPrice] = await Promise.all([
+      tokenAddresses.length > 0
+        ? getTokenPrices(tokenAddresses).catch(() => ({}))
+        : Promise.resolve({}),
+      getBotPrice().catch(() => null),
+    ]);
 
-    const tokensWithPrices = mergeTokenPrices(normalizedTokens, priceData);
+    const tokensWithPrices = mergeTokenPrices(normalizedTokens, priceData, botPrice);
 
     // Step 5: Run analysis
+    const balanceFormattedNum = Number(balance.balanceFormatted);
     const overview = normalizeWalletOverview(
       address,
       balance,
@@ -88,6 +91,11 @@ router.post('/investigate', async (req, res) => {
       tokensWithPrices,
       firstActivityData.status === 'fulfilled' ? firstActivityData.value : null,
     );
+    // USD value of the native BOT balance (null when CoinGecko unavailable).
+    overview.balanceUsd =
+      botPrice?.price && Number.isFinite(balanceFormattedNum)
+        ? balanceFormattedNum * botPrice.price
+        : null;
     const activityScore = calculateActivityScore({ transactions: classifiedTxs, walletAddress: address });
     const counterparties = extractCounterparties(classifiedTxs, address);
     const attentionSignals = detectAttentionSignals({ transactions: classifiedTxs, walletAddress: address, activityScore });

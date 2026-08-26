@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useInvestigation } from '../context/InvestigationContext';
 import { isValidEvmAddress, shortenAddress } from '../utils/address';
-import { formatTokenAmount, formatNumber, timeAgo, formatDate } from '../utils/format';
+import { formatTokenAmount, formatNumber, formatUsd, timeAgo, formatDate } from '../utils/format';
 import InvestigationLoader from '../components/InvestigationLoader';
 import EmptyState from '../components/EmptyState';
 import AIProfile from '../components/AIProfile';
@@ -297,6 +297,11 @@ export default function Investigate() {
           <div className="stat-item">
             <p className="stat-label">Balance</p>
             <p className="stat-value green">{formatTokenAmount(overview.balance)} BOT</p>
+            {overview.balanceUsd !== null && overview.balanceUsd !== undefined && (
+              <p className="mono text-muted" style={{ fontSize: '10px', marginTop: '2px' }}>
+                ≈ ${formatUsd(overview.balanceUsd).replace('$', '')}
+              </p>
+            )}
           </div>
           <div className="stat-item">
             <p className="stat-label">Transactions</p>

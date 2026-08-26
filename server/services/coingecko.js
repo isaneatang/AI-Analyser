@@ -3,12 +3,20 @@
  * Server-side only. Handles token prices, market data, 24h changes, USD valuation.
  * BOT Chain tokens may not exist in CoinGecko.
  * If unavailable, returns null instead of fabricating prices.
+ *
+ * Endpoint selection: CoinGecko DEMO keys ('CG-...', free tier) MUST use
+ * api.coingecko.com with the x-cg-demo-api-key header - calling
+ * pro-api.coingecko.com with them fails every request (error 10011),
+ * which silently disabled all prices before. Paid Pro keys use the pro
+ * endpoint; force with COINGECKO_PLAN=pro.
  */
 
 const API_KEY = process.env.COINGECKO_API_KEY;
-const BASE_URL = API_KEY
-  ? 'https://pro-api.coingecko.com/api/v3'
-  : 'https://api.coingecko.com/api/v3';
+const IS_PRO_PLAN = process.env.COINGECKO_PLAN === 'pro';
+const BASE_URL =
+  API_KEY && IS_PRO_PLAN
+    ? 'https://pro-api.coingecko.com/api/v3'
+    : 'https://api.coingecko.com/api/v3';
 
 /**
  * Make a request to the CoinGecko API.
@@ -20,7 +28,7 @@ async function coingeckoRequest(path) {
   const headers = { accept: 'application/json' };
 
   if (API_KEY) {
-    headers['x-cg-pro-api-key'] = API_KEY;
+    headers[IS_PRO_PLAN ? 'x-cg-pro-api-key' : 'x-cg-demo-api-key'] = API_KEY;
   }
 
   const res = await fetch(url, { headers });
