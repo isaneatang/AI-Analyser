@@ -87,8 +87,10 @@ export default function Snapshot() {
   const [loadedFor, setLoadedFor] = useState(null);
   const [snapError, setSnapError] = useState(null);
 
-  // Timestamp lookup
-  const [timeValue, setTimeValue] = useState('');
+  // Timestamp lookup - separate date/time so mobile wallet browsers
+  // don't need to render a native date picker (which often fails).
+  const [snapshotDate, setSnapshotDate] = useState('');
+  const [snapshotTime, setSnapshotTime] = useState('');
   const [lookup, setLookup] = useState(null);
   const [looking, setLooking] = useState(false);
   const [lookupError, setLookupError] = useState(null);
@@ -155,8 +157,9 @@ export default function Snapshot() {
     setLookup(null);
     try {
       if (!wallet) throw new Error('Load a wallet before searching its publication history.');
-      const ts = Math.floor(new Date(timeValue).getTime() / 1000);
-      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date and time.');
+      const combined = `${snapshotDate}T${snapshotTime || '00:00'}`;
+      const ts = Math.floor(new Date(combined).getTime() / 1000);
+      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Enter a date (YYYY-MM-DD) and optional time (HH:MM).');
       const res = await fetch(`/api/registry/snapshot-at?ts=${ts}&wallet=${wallet}`);
       const data = await res.json();
       if (!res.ok) {
@@ -238,16 +241,27 @@ export default function Snapshot() {
         <h2 className="section-title">Latest Published Snapshot</h2>
         <p className="metric-note">Find the newest snapshot published at or before a local date and time. Publication proves that the content hash was recorded then, not that its claims are true or endorsed by the investigated wallet.</p>
         <form className="snapshot-form" onSubmit={handleTimestampLookup}>
-          <label htmlFor="snapshot-time" className="sr-only">Local date and time</label>
+          <label htmlFor="snapshot-date" className="sr-only">Date YYYY-MM-DD</label>
+          <input
+            id="snapshot-date"
+            type="text"
+            className="input"
+            placeholder="YYYY-MM-DD"
+            value={snapshotDate}
+            onChange={(e) => setSnapshotDate(e.target.value)}
+            style={{ flex: 1, minWidth: '140px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
+          />
+          <label htmlFor="snapshot-time" className="sr-only">Time HH:MM (optional)</label>
           <input
             id="snapshot-time"
-            type="datetime-local"
+            type="text"
             className="input"
-            value={timeValue}
-            onChange={(e) => setTimeValue(e.target.value)}
-            style={{ flex: 1, minWidth: '220px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
+            placeholder="HH:MM"
+            value={snapshotTime}
+            onChange={(e) => setSnapshotTime(e.target.value)}
+            style={{ width: '100px', flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
           />
-          <button type="submit" className="btn btn-primary" disabled={looking || !timeValue || !wallet}>
+          <button type="submit" className="btn btn-primary" disabled={looking || !snapshotDate || !wallet}>
             {looking ? 'SEARCHING...' : 'FIND SNAPSHOT'}
           </button>
         </form>
