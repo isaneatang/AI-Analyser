@@ -522,6 +522,28 @@ input, textarea {
   box-shadow: 0 0 20px rgba(74, 222, 128, 0.05);
 }
 
+/* Glowing card variant for the AI Analysis section */
+.card-glow {
+  border-color: var(--green-muted);
+  box-shadow: 0 0 24px var(--green-glow-strong), 0 0 60px rgba(74, 222, 128, 0.08);
+  background: linear-gradient(135deg, var(--bg-surface) 0%, #152015 100%);
+  position: relative;
+}
+
+.card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--green-glow) 0%, transparent 50%, var(--green-glow) 100%);
+  z-index: -1;
+  opacity: 0.6;
+}
+
+.card-glow .card-title {
+  color: var(--green-bright);
+}
+
 .card-header {
   display: flex;
   align-items: center;

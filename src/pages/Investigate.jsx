@@ -399,7 +399,7 @@ export default function Investigate() {
       {/* AI Analysis + Ask the Wallet */}
       <section className="section" aria-label="AI analysis" ref={(el) => registerSection('ai', el)} data-section="ai">
         <h2 className="section-title">AI Analysis</h2>
-        <div className="card">
+        <div className="card card-glow">
           <AIProfile key={`profile-${address}`} investigation={investigation} embedded />
           <div
             style={{

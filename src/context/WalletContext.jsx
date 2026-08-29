@@ -33,9 +33,17 @@ export function WalletProvider({ children }) {
   // wallet was ALREADY on mainnet. The provider itself is the source of
   // truth for browser wallets.
   const [injectedChainId, setInjectedChainId] = useState(null);
+  // Whether wagmi has ever reported a definite chain. Once true, wagmi is the
+  // authoritative source; injectedChainId only bootstraps the initial render
+  // before wagmi finishes loading its connection state.
+  const [wagmiChainReady, setWagmiChainReady] = useState(false);
   // One automatic switch attempt per wrong-network episode; without this a
   // lagging wagmi state re-triggered the wallet popup in a loop.
   const autoSwitchAttemptRef = useRef(false);
+
+  useEffect(() => {
+    if (chain?.id && !wagmiChainReady) setWagmiChainReady(true);
+  }, [chain?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const eth = window.ethereum;
@@ -55,7 +63,10 @@ export function WalletProvider({ children }) {
   }, []);
 
   const wagmiChainId = chain?.id || null;
-  const chainId = injectedChainId ?? wagmiChainId;
+  // Once wagmi has reported a chain, trust it over window.ethereum since the
+  // active Reown/WalletConnect session may use a provider different from the
+  // injected one.
+  const chainId = wagmiChainReady ? wagmiChainId : (injectedChainId ?? wagmiChainId);
   const isOnBotChain = chainId ? isBotChainId(chainId) : false;
   const isWrongNetwork = isConnected && !isOnBotChain;
 
