@@ -14,6 +14,7 @@
 import { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { isBotChainId, ADD_CHAIN_PARAMS, BOT_CHAIN } from '../config/botChain';
+import { isReownConfigured, appKit } from '../config/reown';
 
 const WalletContext = createContext(null);
 
@@ -185,6 +186,23 @@ export function WalletProvider({ children }) {
     if (isOnBotChain) setNetworkError(null);
   }, [isOnBotChain]);
 
+  /**
+   * Connect to the injected wallet directly without opening any modal.
+   * On mobile wallet browsers (MetaMask, OKX, Bitget) the Reown AppKit
+   * shadow-DOM modal frequently fails to render. The injected provider is
+   * always available in those environments, so we connect to it directly.
+   * Falls back to appKit.open() when no injected provider is detected.
+   */
+  const connectWallet = useCallback(() => {
+    if (!isReownConfigured) return;
+    const injected = connectors.find((c) => c.type === 'injected' || c.id === 'injected');
+    if (injected && window.ethereum) {
+      connect({ connector: injected });
+    } else {
+      appKit?.open();
+    }
+  }, [connect, connectors]);
+
   const value = {
     address,
     isConnected,
@@ -195,6 +213,7 @@ export function WalletProvider({ children }) {
     isSwitchingNetwork,
     networkError,
     switchToBotChain,
+    connectWallet,
     disconnect: () => {
       setNetworkError(null);
       disconnect();
@@ -223,6 +242,7 @@ export function WalletProviderMock({ children }) {
     isSwitchingNetwork: false,
     networkError: null,
     switchToBotChain: async () => false,
+    connectWallet: () => {},
     disconnect: () => {},
   };
 
