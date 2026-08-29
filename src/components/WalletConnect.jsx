@@ -8,7 +8,7 @@
 
 import { useWallet } from '../context/WalletContext';
 import { shortenAddress } from '../utils/address';
-import { isReownConfigured } from '../config/reown';
+import { isReownConfigured, appKit } from '../config/reown';
 
 /**
  * Wallet connection button with real wallet state.
@@ -78,10 +78,20 @@ export default function WalletConnect() {
     );
   }
 
-  // Reown is configured, show the AppKit button
+  // Reown is configured, show a plain button that opens the modal
+  // programmatically. The <appkit-button> web component's built-in modal
+  // often glitches or renders behind chrome in mobile wallet browsers
+  // (MetaMask, OKX, Bitget). A programmatic modal.open() is far more
+  // reliable across environments.
   return (
     <div>
-      <appkit-button />
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={() => appKit?.open()}
+        aria-label="Connect wallet"
+      >
+        Connect Wallet
+      </button>
       {networkError && (
         <p
           role="alert"
