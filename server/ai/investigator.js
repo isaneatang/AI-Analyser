@@ -76,7 +76,7 @@ function createEvidencePackage(investigation) {
  */
 export async function generateInvestigationReport(investigation) {
   if (!isGeminiAvailable()) {
-    return 'AI analysis is not available. Set GEMINI_API_KEY to enable this feature.';
+    return 'AI analysis is not available. Configure an AI provider key to enable this feature.';
   }
 
   const evidence = createEvidencePackage(investigation);
@@ -94,7 +94,7 @@ export async function generateInvestigationReport(investigation) {
  */
 export async function answerWalletQuestion(question, investigation) {
   if (!isGeminiAvailable()) {
-    return 'AI chat is not available. Set GEMINI_API_KEY to enable this feature.';
+    return 'AI chat is not available. Configure an AI provider key to enable this feature.';
   }
 
   // Create a focused evidence package based on the question
@@ -112,7 +112,7 @@ export async function answerWalletQuestion(question, investigation) {
  */
 export async function explainTransaction(transaction, investigation) {
   if (!isGeminiAvailable()) {
-    return 'AI explanation is not available. Set GEMINI_API_KEY to enable this feature.';
+    return 'AI explanation is not available. Configure an AI provider key to enable this feature.';
   }
 
   const txDetails = [

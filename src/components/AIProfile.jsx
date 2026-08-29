@@ -3,7 +3,7 @@
  * Fetches the AI report on mount. Handles slow responses gracefully.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Markdown from './Markdown';
 
 /**
@@ -15,32 +15,36 @@ export default function AIProfile({ investigation, embedded = false }) {
   const [report, setReport] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!investigation || fetchedRef.current) return;
-    fetchedRef.current = true;
+    if (!investigation) return;
+    const controller = new AbortController();
 
     async function fetchReport() {
       setLoading(true);
+      setError(null);
+      setReport('');
 
       try {
         const res = await fetch('/api/investigate/report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ investigation }),
-          signal: AbortSignal.timeout(120000), // 2 min timeout
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(120000)]),
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || data.message || 'AI analysis failed.');
         setReport(data.report || 'No analysis available.');
-      } catch {
-        setError('AI analysis is temporarily unavailable. Please try again later, or contact the developer if this persists.');
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setError('AI analysis is temporarily unavailable. Retry in a moment.');
       } finally {
         setLoading(false);
       }
     }
 
     fetchReport();
+    return () => controller.abort();
   }, [investigation]);
 
   const wrap = (node) => (embedded ? node : <div className="card">{node}</div>);
@@ -59,7 +63,7 @@ export default function AIProfile({ investigation, embedded = false }) {
           </p>
         </div>
         <p className="text-muted" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-xs)' }}>
-          Gemini is analyzing the wallet evidence.
+          The configured AI provider is analyzing the wallet evidence.
         </p>
       </div>
     );

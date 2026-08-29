@@ -17,15 +17,15 @@ export default function Navbar() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="navbar" role="navigation" aria-label="Main navigation">
+    <nav className="navbar" aria-label="Main navigation">
       <div className="navbar-brand">
-        <a href="/" className="navbar-logo" aria-label="AI Wallet Investigator home">
+        <Link to="/" className="navbar-logo" aria-label="AI Wallet Investigator home">
           <span className="navbar-logo-icon" aria-hidden="true">ai</span>
           <span className="navbar-logo-text">WALLET INVESTIGATOR</span>
-        </a>
+        </Link>
       </div>
 
-      <div className="navbar-nav" role="menubar">
+      <div className="navbar-nav">
         {NAV_LINKS.map((link) => {
           const isActive = link.to === '/' ? pathname === '/' : pathname.startsWith(link.to);
           return (
@@ -33,7 +33,7 @@ export default function Navbar() {
               key={link.to}
               to={link.to}
               className={`navbar-nav-link ${isActive ? 'navbar-nav-active' : ''}`}
-              role="menuitem"
+              aria-current={isActive ? 'page' : undefined}
             >
               {link.label}
             </Link>

@@ -11,15 +11,11 @@ import { getRecentInvestigations } from '../utils/storage';
 import { shortenAddress } from '../utils/address';
 import { timeAgo } from '../utils/format';
 import { BOT_CHAIN } from '../config/botChain';
+import { Link } from 'react-router-dom';
 
 export default function Home() {
-  const [recent, setRecent] = useState([]);
+  const [recent] = useState(() => getRecentInvestigations());
   const [serverStatus, setServerStatus] = useState(null);
-
-  // Load recent investigations from localStorage on mount
-  useEffect(() => {
-    setRecent(getRecentInvestigations());
-  }, []);
 
   // Check server health on mount
   useEffect(() => {
@@ -31,8 +27,7 @@ export default function Home() {
 
   return (
     <main className="page-home">
-      {/* Branding */}
-      <div style={{ textAlign: 'center', marginBottom: 'var(--space-2xl)' }}>
+      <div className="home-hero">
         <h1
           className="mono text-glow"
           style={{
@@ -52,29 +47,14 @@ export default function Home() {
             margin: '0 auto',
           }}
         >
-          Paste a BOT Chain wallet address and get a full breakdown of its activity on-chain.
+          Trace wallet activity, inspect evidence, and publish verifiable reports on BOT Chain.
         </p>
-        <div
-          style={{
-            marginTop: 'var(--space-lg)',
-            maxWidth: '520px',
-            margin: 'var(--space-lg) auto 0',
-            textAlign: 'left',
-          }}
-        >
-          <p className="mono" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--green-bright)', marginBottom: 'var(--space-sm)', textAlign: 'center' }}>
-            HOW IT WORKS
-          </p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', lineHeight: '1.7', textAlign: 'center' }}>
-            Enter a wallet address and the app pulls its full transaction history, token holdings, and counterparties directly from BOT Chain. AI then analyzes the data and produces a profile with an activity score and attention signals. You can mint a snapshot of the investigation as a soulbound NFT on-chain, creating a permanent timestamped record tied to that wallet. The snapshot page lets you browse all minted snapshots for a wallet and look up what the latest investigation found at any point in time.
-          </p>
-        </div>
         {serverStatus && (
           <div
             className="mono"
             style={{
               marginTop: 'var(--space-md)',
-              fontSize: '10px',
+               fontSize: 'var(--font-size-xs)',
               color: serverStatus.status === 'ok' ? 'var(--green-bright)' : 'var(--status-warning)',
               display: 'flex',
               alignItems: 'center',
@@ -113,15 +93,21 @@ export default function Home() {
         <WalletSearch />
       </div>
 
+      <div className="home-capabilities" aria-label="Investigation workflow">
+        <div><span>01 / TRACE</span><p>Collect activity, holdings, and counterparties from chain evidence.</p></div>
+        <div><span>02 / INTERPRET</span><p>Use deterministic metrics and evidence-scoped AI analysis.</p></div>
+        <div><span>03 / VERIFY</span><p>Download a report or publish its hash and snapshot on-chain.</p></div>
+      </div>
+
       {/* Recent Investigations */}
       {recent.length > 0 && (
         <div style={{ width: '100%', maxWidth: '640px', marginTop: 'var(--space-2xl)' }}>
           <h2 className="section-title">Recent Investigations</h2>
           <div className="recent-list">
             {recent.slice(0, 5).map((item) => (
-              <a
+              <Link
                 key={item.address}
-                href={`/investigate/${item.address}`}
+                to={`/investigate/${item.address}`}
                 className="recent-item"
                 aria-label={`Investigate ${item.address}`}
               >
@@ -129,7 +115,7 @@ export default function Home() {
                   {shortenAddress(item.address)}
                 </span>
                 <span className="recent-item-time">{timeAgo(item.timestamp)}</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

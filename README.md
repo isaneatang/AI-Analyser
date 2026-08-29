@@ -19,17 +19,18 @@ React Frontend (Vite)
         |
 Express Server
         |
-  +-----+-----+-----+
-  |     |     |     |
-Moralis RPC CoinGecko Gemini
+  +----------+----------+-------------+
+  |          |          |             |
+BOT RPC   Moralis   CoinGecko   AI providers
 ```
 
 - **Frontend**: React + Vite + React Router
 - **Wallet**: Reown AppKit + Wagmi + Viem
 - **Server**: Express.js (handles secret API keys)
-- **Blockchain**: Moralis EVM API + BOT Chain RPC
-- **Market Data**: CoinGecko API
-- **AI**: Gemini API (interpretation only, never blockchain data source)
+- **BOT Chain evidence**: BOT Chain JSON-RPC
+- **Cross-chain holdings**: Moralis EVM API (optional)
+- **Market Data**: CoinGecko API (optional BOT/USD valuation)
+- **AI**: OpenRouter, Groq, or Gemini (at least one for AI features)
 - **Markdown**: react-markdown (renders AI output)
 
 ## Folder Structure
@@ -88,9 +89,9 @@ ai-wallet-investigator/
 
 ## Key Design Decisions
 
-- **BOT Chain first**: Chain ID 968, RPC https://rpc.bohr.life
+- **BOT Chain first**: The current deployment uses mainnet chain ID 677
 - **Server-side secrets**: API keys never reach the browser
-- **Gemini interprets, not fabricates**: AI receives structured evidence only
+- **AI interprets, not fabricates**: Every provider receives structured evidence only
 - **Deterministic analysis**: Activity scoring and classification in application code
 - **Evidence system**: Every AI claim traceable to blockchain data
 
@@ -98,11 +99,11 @@ ai-wallet-investigator/
 
 1. User enters a wallet address
 2. Frontend sends address to `/api/investigate`
-3. Server fetches data from Moralis and BOT Chain RPC in parallel
+3. Server fetches BOT Chain evidence from the configured JSON-RPC endpoint
 4. Data is normalized into stable application structures
 5. Deterministic analysis runs (activity score, counterparties, attention signals)
 6. Investigation object is returned to frontend
-7. AI profile is generated on-demand using Gemini
+7. AI profile is generated on-demand using the configured AI provider
 
 Wallet age is calculated deterministically. Since the recent-transaction scan
 only covers the newest blocks, a chain-wide binary search finds the wallet's
@@ -115,7 +116,7 @@ numerically.
 1. User asks a question about the wallet
 2. Frontend sends question + investigation data to `/api/chat`
 3. Server creates a compact evidence package from investigation data
-4. Evidence + question is sent to Gemini
+4. Evidence + question is sent to the configured AI provider
 5. AI responds with answer and evidence references
 
 ## Environment Variables
@@ -125,9 +126,12 @@ See `.env.example` for the full list. Key variables:
 | Variable | Purpose | Client/Server |
 |----------|---------|---------------|
 | `VITE_REOWN_PROJECT_ID` | Wallet connection | Client |
-| `MORALIS_API_KEY` | Blockchain data | Server |
-| `COINGECKO_API_KEY` | Market data | Server |
-| `GEMINI_API_KEY` | AI analysis | Server |
+| `MORALIS_API_KEY` | Optional seven-network cross-chain holdings | Server |
+| `COINGECKO_API_KEY` | Optional BOT/USD market valuation | Server |
+| `GEMINI_API_KEY` | Optional third AI fallback | Server |
+| `OPENROUTER_API_KEY` | Preferred AI provider | Server |
+| `OPENROUTER_MODEL` | Defaults to `inclusionai/ling-3.0-flash-fin:free` | Server |
+| `GROQ_API_KEY` | Optional AI fallback | Server |
 | `BOT_NETWORK` | `testnet` or `mainnet` | Server |
 | `BOT_RPC_URL` | Direct RPC (overrides per-network default) | Server |
 | `REGISTRY_CONTRACT` | Deployed InvestigationRegistry address | Server |
@@ -140,13 +144,27 @@ The app supports both `testnet` and `mainnet` with a one-line switch:
 - **Client:** change `ACTIVE_NETWORK_KEY` in `src/config/botChain.js`
   (`'testnet'` → `'mainnet'`). Wallet connect, network detection/adding, and
   switching all follow automatically.
-- **Server:** set `BOT_NETWORK=mainnet` in `.env` (defaults to `testnet`).
+- **Server:** set `BOT_NETWORK=mainnet` in `.env` (defaults to `mainnet`).
   The RPC is taken from `BOT_RPC_URL`, or per-network defaults
   (`BOT_TESTNET_RPC_URL` / `BOT_MAINNET_RPC_URL`).
 
 WalletConnect detects the wallet's current chain and adds the BOT network
 first (`wallet_addEthereumChain`) before switching
 (`wallet_switchEthereumChain`) when it is not present.
+
+## Provider Responsibilities
+
+- **BOT RPC is required.** It supplies native balance, BOT token balances and
+  metadata, transfer logs, transaction details and receipts, contract code,
+  wallet age, registry reads, and registry transaction confirmation.
+- **Moralis is optional but active.** It powers only the cross-chain holdings
+  panel for Ethereum, BSC, Polygon, Arbitrum, Optimism, Base, and Avalanche.
+- **CoinGecko is optional but active.** It supplies BOT/USD pricing. BOT Chain
+  contract addresses are not queried against Ethereum's token-price endpoint.
+- **OpenRouter is the primary AI provider.** The verified default model is
+  `inclusionai/ling-3.0-flash-fin:free`. Groq and Gemini are fallbacks.
+- **AI providers never retrieve blockchain facts.** They interpret the compact
+  evidence package produced by the RPC and deterministic analysis code.
 
 ## On-Chain Registry & Snapshots
 
@@ -161,6 +179,11 @@ mints timestamped snapshot NFTs:
    report hash, timestamp, and full report text (`dataRef`).
 4. **Timestamp page** (`/snapshot/:wallet`): browse a wallet's snapshots and
    query "what was known at time T" (`getSnapshotAtOrBefore`).
+
+The timestamp page verifies embedded snapshot content locally by recomputing
+its keccak256 hash. A matching hash proves that the displayed content matches
+the bytes published on-chain. It does not prove that the report's claims are
+true or endorsed by the investigated wallet.
 
 The download button on the investigate page saves the same markdown whose
 hash is anchored, so the file can be re-verified on-chain.

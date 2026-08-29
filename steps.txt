@@ -68,7 +68,7 @@ IF SOMETHING DOES NOT WORK
 - Check the terminal where npm run dev is running
 - Make sure .env has all required API keys
 - Make sure the server is running (port 3001)
-- If investigation fails, check MORALIS_API_KEY and GEMINI_API_KEY
+    - If investigation fails, check the configured AI key and RPC settings
 - If wallet won't connect, check VITE_REOWN_PROJECT_ID
 - If mint/anchor fails, check REGISTRY_CONTRACT and BOT_PRIVATE_KEY
 
@@ -109,8 +109,15 @@ ENVIRONMENT VARIABLES (reference)
   VITE_REOWN_PROJECT_ID   wallet connection        (client)
   BOT_NETWORK             testnet | mainnet        (server)
   BOT_RPC_URL             RPC URL                  (server)
-  MORALIS_API_KEY         blockchain data          (server)
-  COINGECKO_API_KEY       market data              (server)
-  GEMINI_API_KEY          AI analysis              (server)
+  MORALIS_API_KEY         optional cross-chain data (server)
+  COINGECKO_API_KEY       optional BOT/USD price    (server)
+  OPENROUTER_API_KEY      preferred AI provider    (server)
+  OPENROUTER_MODEL        inclusionai/ling-3.0-flash-fin:free
+  GROQ_API_KEY            optional AI fallback     (server)
+  GEMINI_API_KEY          optional AI fallback     (server)
   REGISTRY_CONTRACT       contract address         (server)
   BOT_PRIVATE_KEY         funded key for gas       (server)
+
+The BOT RPC is the only required blockchain data source. Moralis can be
+removed if the cross-chain holdings panel is removed. CoinGecko can be removed
+if USD valuation is not needed. Keep at least one AI key for AI analysis.

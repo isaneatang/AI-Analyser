@@ -8,7 +8,7 @@
 
 import { Router } from 'express';
 import { getWalletBalance, getTokenBalances, getWalletTransactions, getTokenTransfers, getFirstActivity } from './services/moralis.js';
-import { getBotPrice, getTokenPrices } from './services/coingecko.js';
+import { getBotPrice } from './services/coingecko.js';
 import { BOT_CHAIN_ID, BOT_CHAIN_NAME } from './config/network.js';
 import { normalizeTransaction, normalizeTokenTransfer, normalizeWalletOverview } from './normalizers/wallet.js';
 import { normalizeTokens, mergeTokenPrices } from './normalizers/tokens.js';
@@ -68,18 +68,11 @@ router.post('/investigate', async (req, res) => {
     const classifiedTxs = mergeAndClassifyTransactions(normalizedTxs, normalizedTransfers, address);
 
     // Step 4: Get market data for tokens
-    const tokenAddresses = normalizedTokens
-      .map((t) => t.contractAddress)
-      .filter(Boolean);
+    // CoinGecko has no BOT Chain contract-price endpoint. Native BOT pricing
+    // still supplies the wallet USD value and deterministic wrapped/stable fallbacks.
+    const botPrice = await getBotPrice().catch(() => null);
 
-    const [priceData, botPrice] = await Promise.all([
-      tokenAddresses.length > 0
-        ? getTokenPrices(tokenAddresses).catch(() => ({}))
-        : Promise.resolve({}),
-      getBotPrice().catch(() => null),
-    ]);
-
-    const tokensWithPrices = mergeTokenPrices(normalizedTokens, priceData, botPrice);
+    const tokensWithPrices = mergeTokenPrices(normalizedTokens, {}, botPrice);
 
     // Step 5: Run analysis
     const balanceFormattedNum = Number(balance.balanceFormatted);

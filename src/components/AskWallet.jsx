@@ -42,12 +42,13 @@ export default function AskWallet({ investigation, embedded = false }) {
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || 'Question failed.');
       const aiMsg = { role: 'ai', content: data.answer || 'No response received.' };
       setMessages((prev) => [...prev, aiMsg]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'ai', content: 'AI service is temporarily unavailable. Please try again later, or contact the developer if this persists.' },
+        { role: 'ai', content: 'AI service is temporarily unavailable. Retry in a moment.' },
       ]);
     } finally {
       setLoading(false);
@@ -63,7 +64,7 @@ export default function AskWallet({ investigation, embedded = false }) {
     <>
       {/* Chat messages */}
       {messages.length > 0 && (
-        <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: 'var(--space-md)' }}>
+        <div role="log" aria-live="polite" aria-label="Wallet questions and answers" style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: 'var(--space-md)' }}>
           {messages.map((msg, i) => (
             <div
               key={i}
@@ -123,7 +124,9 @@ export default function AskWallet({ investigation, embedded = false }) {
 
       {/* Input */}
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+        <label htmlFor="wallet-question" className="sr-only">Ask a question about this wallet</label>
         <input
+          id="wallet-question"
           type="text"
           className="input"
           placeholder="Ask about this wallet..."

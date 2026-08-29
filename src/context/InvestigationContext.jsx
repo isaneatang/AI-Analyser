@@ -3,7 +3,7 @@
  * Stores wallet data, transactions, analysis, and loading state.
  */
 
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 const InvestigationContext = createContext(null);
 
@@ -16,6 +16,8 @@ export function InvestigationProvider({ children }) {
   const [error, setError] = useState(null);
   const [loadingStage, setLoadingStage] = useState('');
   const abortRef = useRef(null);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   /**
    * Start a new investigation for a wallet address.
@@ -50,17 +52,23 @@ export function InvestigationProvider({ children }) {
         throw new Error(body.message || body.error || 'Investigation failed');
       }
 
-      setLoadingStage('ANALYZING CONTRACTS');
+      if (abortRef.current !== controller) return;
+      setLoadingStage('PROCESSING EVIDENCE');
 
       const data = await res.json();
+      if (abortRef.current !== controller) return;
       setInvestigation(data);
       setLoadingStage('READY');
     } catch (err) {
       if (err.name === 'AbortError') return; // Ignore aborted requests
+      if (abortRef.current !== controller) return;
       console.error('[InvestigationContext]', err);
       setError(err.message || 'Failed to investigate wallet');
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -68,6 +76,7 @@ export function InvestigationProvider({ children }) {
     if (abortRef.current) abortRef.current.abort();
     setInvestigation(null);
     setError(null);
+    setLoading(false);
     setLoadingStage('');
   }, []);
 

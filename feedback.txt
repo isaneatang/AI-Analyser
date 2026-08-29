@@ -544,3 +544,76 @@ HUMAN CHECK:
 8. Check mobile layout: navbar wraps, section nav adjusts
 
 NEXT: Browser testing, or continue feature development
+
+---
+
+DATE: 2026-08-29
+
+STAGE: Frontend Stabilization + Snapshot Verification + OpenRouter
+STATUS: Implemented
+
+WHAT WAS BUILT:
+- Replaced simulated percentage loading with truthful request-stage activity.
+- Prevented stale wallet data and aborted requests from crossing investigations.
+- Restructured the home page around the investigation terminal and three concise steps.
+- Improved mobile controls, section navigation, filters, typography, and accessibility states.
+- Added incremental transaction loading and corrected counterparty/fund-flow labels.
+- Reworked snapshot lookup with wallet-scoped state, local date/time input,
+  newest-first results, clearer publication semantics, and local content hash verification.
+- Added OpenRouter as the preferred AI provider when configured, followed by
+  Groq and Gemini fallbacks. No smart contract changes were made.
+
+FILES CHANGED:
+- src/context/InvestigationContext.jsx
+- src/components/InvestigationLoader.jsx
+- src/components/AIProfile.jsx
+- src/components/AskWallet.jsx
+- src/components/CrossChainTokens.jsx
+- src/components/Navbar.jsx
+- src/pages/Home.jsx
+- src/pages/Investigate.jsx
+- src/pages/Snapshot.jsx
+- src/utils/storage.js
+- src/App.jsx
+- src/index.css
+- server/services/gemini.js
+- .env.example, README.md, steps.txt
+
+VERIFIED:
+- npm run build passes.
+- npm run lint has no errors; existing repository warnings remain.
+- git diff --check passes.
+
+NOT TESTED:
+- Real mobile wallet browsers.
+- Live OpenRouter response (requires OPENROUTER_API_KEY).
+- Browser visual review at physical phone sizes.
+
+---
+
+DATE: 2026-08-29
+
+STAGE: Provider Verification
+STATUS: Complete
+
+WHAT CHANGED:
+- Moved the OpenRouter key out of tracked .env.example and into ignored .env.
+- Configured and live-tested inclusionai/ling-3.0-flash-fin:free.
+- Updated stale Groq and Gemini model defaults and set an 8 second provider
+  timeout so fallback attempts fit the Vercel function duration.
+- Made /api/health verify the RPC chain instead of returning static status.
+- Removed ineffective CoinGecko Ethereum contract lookups for BOT contracts;
+  BOT/USD pricing remains active.
+- Documented the exact required and optional provider responsibilities.
+
+LIVE VERIFICATION:
+- OpenRouter key authentication: valid.
+- OpenRouter application service: returned a response.
+- BOT RPC: online, chain ID 677 matches configuration.
+- Moralis: authenticated request returned wallet balance data.
+- CoinGecko: authenticated request returned BOT price data.
+- Groq replacement fallback model: endpoint/model accepted.
+- Gemini: configured but its host was unreachable from this environment.
+
+SECURITY NOTE:
+- Rotate the OpenRouter key because it was previously placed in .env.example.

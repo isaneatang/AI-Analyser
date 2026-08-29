@@ -1,55 +1,21 @@
 /**
  * InvestigationLoader - Shows loading progress during investigation.
- * Displays a progress bar that fills over a ~30 second window, with the
- * analysis steps laid out horizontally underneath, blinking one by one.
- * The real investigation stage (from context) still drives completion, so
- * progress never lags behind an early finish.
+ * Displays only stages reported by the request lifecycle. The animated rail
+ * is indeterminate because the server does not expose measurable progress.
  */
 
-import { useState, useEffect } from 'react';
-
-/** All possible investigation stages in order */
-const ALL_STAGES = [
-  'INITIALIZING',
-  'CONNECTING',
-  'FETCHING WALLET DATA',
-  'LOADING TRANSACTIONS',
-  'ANALYZING CONTRACTS',
-  'MAPPING COUNTERPARTIES',
-  'CALCULATING METRICS',
-  'GENERATING AI ANALYSIS',
-  'READY',
+const STAGES = [
+  { key: 'CONNECTING', label: 'Establishing BOT Chain connection' },
+  { key: 'FETCHING WALLET DATA', label: 'Collecting wallet activity' },
+  { key: 'PROCESSING EVIDENCE', label: 'Normalizing and scoring evidence' },
 ];
-
-/** Target wall-clock time for the full sequence, in seconds */
-const TARGET_SECONDS = 15;
 
 /**
  * @param {Object} props
  * @param {string} props.stage - Current loading stage string from context.
  */
 export default function InvestigationLoader({ stage = '' }) {
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Real stage reported by the API (if known), else -1
-  const realIndex = ALL_STAGES.findIndex((s) => s === stage);
-
-  // Time-based index: advances evenly across the 30 second window
-  const timeIndex = Math.min(
-    ALL_STAGES.length - 1,
-    Math.floor((elapsed / TARGET_SECONDS) * ALL_STAGES.length)
-  );
-
-  // Show whichever is further along, so real completion always wins
-  const currentIndex = Math.max(timeIndex, realIndex);
-
-  // Bar fills to 95% during the window, then snaps to 100%
-  const progress = Math.min(95, (elapsed / TARGET_SECONDS) * 100);
+  const currentIndex = Math.max(0, STAGES.findIndex((item) => item.key === stage));
 
   return (
     <div className="investigation-loader">
@@ -62,30 +28,30 @@ export default function InvestigationLoader({ stage = '' }) {
         </div>
 
         {/* Main status */}
-        <div className="loader-status">
+        <div className="loader-status" role="status" aria-live="polite">
           <p className="mono text-green" style={{ fontSize: 'var(--font-size-lg)', marginBottom: 'var(--space-xs)' }}>
-            ANALYSING WALLET
+            ANALYZING WALLET
           </p>
           <p className="mono text-muted" style={{ fontSize: 'var(--font-size-xs)' }}>
-            {ALL_STAGES[currentIndex]}
+            {STAGES[currentIndex].label}
           </p>
         </div>
 
         {/* Progress bar */}
-        <div className="loader-progress">
-          <div className="loader-progress-fill" style={{ width: `${progress}%` }} />
+        <div className="loader-progress" aria-hidden="true">
+          <div className="loader-progress-fill" />
         </div>
 
         {/* Horizontal step chips, blinking one by one */}
         <div className="loader-steps" role="list" aria-label="Investigation steps">
-          {ALL_STAGES.map((s, i) => {
+          {STAGES.map((item, i) => {
             let status = 'pending';
             if (i < currentIndex) status = 'complete';
             else if (i === currentIndex) status = 'active';
             return (
-              <span key={s} className={`loader-step ${status}`} role="listitem">
+              <span key={item.key} className={`loader-step ${status}`} role="listitem">
                 <span className="loader-step-icon" aria-hidden="true" />
-                <span className="loader-step-label">{s}</span>
+                <span className="loader-step-label">{item.label}</span>
               </span>
             );
           })}
@@ -168,10 +134,16 @@ export default function InvestigationLoader({ stage = '' }) {
 
         .loader-progress-fill {
           height: 100%;
+          width: 38%;
           background: linear-gradient(90deg, var(--green-muted), var(--green-bright));
           border-radius: 3px;
-          transition: width 1s linear;
           box-shadow: 0 0 12px var(--green-glow);
+          animation: loader-scan 1.4s ease-in-out infinite;
+        }
+
+        @keyframes loader-scan {
+          from { transform: translateX(-110%); }
+          to { transform: translateX(270%); }
         }
 
         /* Horizontal step chips */
@@ -188,7 +160,7 @@ export default function InvestigationLoader({ stage = '' }) {
           align-items: center;
           gap: 6px;
           font-family: var(--font-mono);
-          font-size: 10px;
+          font-size: var(--font-size-xs);
           letter-spacing: 0.04em;
           padding: 4px 10px;
           border: 1px solid var(--border-subtle);
@@ -228,16 +200,10 @@ export default function InvestigationLoader({ stage = '' }) {
           color: var(--green-bright);
           border-color: var(--green-muted);
           box-shadow: 0 0 10px var(--green-glow);
-          animation: step-blink 0.8s ease-in-out infinite;
         }
 
         .loader-step.active .loader-step-icon {
           background: var(--green-bright);
-        }
-
-        @keyframes step-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
         }
       `}</style>
     </div>

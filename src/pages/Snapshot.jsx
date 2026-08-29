@@ -1,15 +1,21 @@
 /**
  * Snapshot - Timestamp page for the on-chain InvestigationRegistry.
- * Browse snapshot NFTs minted for a wallet and query what was known at any
- * point in time (getSnapshotAtOrBefore).
+ * Browse snapshot NFTs minted for a wallet and query the latest snapshot
+ * published at or before a selected time.
  */
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { isValidEvmAddress, shortenAddress } from '../utils/address';
-import { formatDate } from '../utils/format';
+import { formatDateTime } from '../utils/format';
+import { keccak256, toHex } from 'viem';
 
 function SnapshotCard({ s, onSelect }) {
+  const computedHash = s.dataRef ? keccak256(toHex(s.dataRef)) : null;
+  const contentMatches = computedHash
+    ? computedHash.toLowerCase() === s.summaryHash?.toLowerCase()
+    : null;
+
   return (
     <div
       className="card"
@@ -22,7 +28,7 @@ function SnapshotCard({ s, onSelect }) {
         </span>
         {s.timestamp && (
           <span className="mono text-muted" style={{ fontSize: '10px' }}>
-            {formatDate(Number(s.timestamp) * 1000)}
+            {formatDateTime(Number(s.timestamp) * 1000)}
           </span>
         )}
       </div>
@@ -30,6 +36,13 @@ function SnapshotCard({ s, onSelect }) {
         <div className="mono" style={{ color: 'var(--green-bright)', wordBreak: 'break-all' }}>
           {s.summaryHash}
         </div>
+        <p className={`snapshot-proof ${contentMatches === true ? 'verified' : contentMatches === false ? 'mismatch' : ''}`}>
+          {contentMatches === true
+            ? 'CONTENT HASH VERIFIED'
+            : contentMatches === false
+              ? 'CONTENT HASH MISMATCH'
+              : 'NO EMBEDDED CONTENT TO VERIFY'}
+        </p>
         <div className="text-muted">
           Wallet: <span className="mono">{shortenAddress(s.wallet, 6)}</span>
           {s.investigator && (
@@ -39,7 +52,7 @@ function SnapshotCard({ s, onSelect }) {
         {s.dataRef && (
           <details style={{ marginTop: 'var(--space-sm)' }}>
             <summary className="mono text-muted" style={{ fontSize: '10px', cursor: 'pointer' }}>
-              view data ({s.dataRef.length} chars)
+               view on-chain report ({s.dataRef.length} chars)
             </summary>
             <pre
               className="mono text-muted"
@@ -81,25 +94,42 @@ export default function Snapshot() {
   const [lookupError, setLookupError] = useState(null);
 
   const wallet = walletParam && isValidEvmAddress(walletParam) ? walletParam.toLowerCase() : null;
+  const invalidWalletParam = Boolean(walletParam && !wallet);
+
+  useEffect(() => {
+    setAddressInput(walletParam || '');
+  }, [walletParam]);
 
   useEffect(() => {
     fetch('/api/registry/status')
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Registry status unavailable.');
+        return data;
+      })
       .catch(() => ({ configured: false, address: null }))
       .then((data) => setStatus(data));
   }, []);
 
   useEffect(() => {
+    setSnapshots([]);
+    setSnapError(null);
+    setLookup(null);
+    setLookupError(null);
+    setLoadedFor(null);
     if (!wallet) return;
     let cancelled = false;
     fetch(`/api/registry/snapshots/${wallet}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load snapshots.');
+        return data;
+      })
       .then((data) => {
         if (cancelled) return;
-        if (data.error) setSnapError(data.error);
-        else setSnapshots(data.snapshots || []);
+        setSnapshots((data.snapshots || []).sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
       })
-      .catch(() => !cancelled && setSnapError('Failed to load snapshots.'))
+      .catch((err) => !cancelled && setSnapError(err.message || 'Failed to load snapshots.'))
       .finally(() => { if (!cancelled) setLoadedFor(wallet); });
     return () => { cancelled = true; };
   }, [wallet]);
@@ -111,23 +141,23 @@ export default function Snapshot() {
     e.preventDefault();
     const addr = addressInput.trim();
     if (isValidEvmAddress(addr)) {
+      setSnapError(null);
       navigate(`/snapshot/${addr}`);
     } else {
       setSnapError('Invalid EVM address.');
     }
   }
 
-  async function handleTimestampLookup() {
+  async function handleTimestampLookup(e) {
+    e?.preventDefault();
     setLooking(true);
     setLookupError(null);
     setLookup(null);
     try {
-      // Accept both 'YYYY-MM-DDTHH:MM' and 'YYYY-MM-DD HH:MM' formats
-      const normalized = timeValue.trim().replace(' ', 'T');
-      const ts = Math.floor(new Date(normalized).getTime() / 1000);
-      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date/time (YYYY-MM-DD HH:MM).');
-      const walletParam = wallet ? `&wallet=${wallet}` : '';
-      const res = await fetch(`/api/registry/snapshot-at?ts=${ts}${walletParam}`);
+      if (!wallet) throw new Error('Load a wallet before searching its publication history.');
+      const ts = Math.floor(new Date(timeValue).getTime() / 1000);
+      if (!Number.isFinite(ts) || ts <= 0) throw new Error('Pick a valid date and time.');
+      const res = await fetch(`/api/registry/snapshot-at?ts=${ts}&wallet=${wallet}`);
       const data = await res.json();
       if (!res.ok) {
         setLookupError(data.error || 'Lookup failed.');
@@ -144,9 +174,11 @@ export default function Snapshot() {
   return (
     <main className="page-investigate container">
       <div className="investigate-header">
-        <p className="section-title" style={{ justifyContent: 'center' }}>Snapshot / Timestamp</p>
+        <p className="eyebrow">ON-CHAIN RECORDS / BOT CHAIN</p>
+        <h1 className="snapshot-title">Snapshot Registry</h1>
+        <p className="snapshot-intro">Inspect published investigation records and verify embedded report content against its on-chain hash.</p>
         <p className="text-muted mono" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-xs)' }}>
-          {status?.address ? `Registry: ${shortenAddress(status.address, 8)}` : 'Registry: not configured'}
+          {!status ? 'Checking registry...' : status.address ? `Registry: ${shortenAddress(status.address, 8)}` : 'Registry unavailable'}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
           <Link to="/" className="btn btn-secondary btn-sm">Home</Link>
@@ -159,8 +191,10 @@ export default function Snapshot() {
       {/* Wallet address input */}
       <section className="section" aria-label="Load snapshots">
         <h2 className="section-title">Load Snapshots</h2>
-        <form onSubmit={handleAddressSubmit} style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+        <form onSubmit={handleAddressSubmit} className="snapshot-form">
+          <label htmlFor="snapshot-wallet" className="sr-only">Wallet address</label>
           <input
+            id="snapshot-wallet"
             type="text"
             className="input"
             placeholder="0x... wallet address"
@@ -169,15 +203,17 @@ export default function Snapshot() {
             style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
           />
           <button type="submit" className="btn btn-primary" disabled={loadingSnaps}>
-            {loadingSnaps ? '...' : 'Load'}
+            {loadingSnaps ? 'LOADING...' : 'LOAD'}
           </button>
         </form>
 
-        {snapError && (
-          <p className="text-muted" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-sm)' }}>
-            {snapError}
+        {(snapError || invalidWalletParam) && (
+          <p role="alert" className="input-error-text">
+            {snapError || 'The wallet address in this URL is invalid.'}
           </p>
         )}
+
+        {loadingSnaps && <p role="status" className="snapshot-status">Reading snapshot records from BOT Chain...</p>}
 
         {snapshots.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
@@ -199,23 +235,25 @@ export default function Snapshot() {
 
       {/* Timestamp lookup */}
       <section className="section" aria-label="Timestamp lookup">
-        <h2 className="section-title">What Was Known At a Time</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)', alignItems: 'center' }}>
+        <h2 className="section-title">Latest Published Snapshot</h2>
+        <p className="metric-note">Find the newest snapshot published at or before a local date and time. Publication proves that the content hash was recorded then, not that its claims are true or endorsed by the investigated wallet.</p>
+        <form className="snapshot-form" onSubmit={handleTimestampLookup}>
+          <label htmlFor="snapshot-time" className="sr-only">Local date and time</label>
           <input
-            type="text"
+            id="snapshot-time"
+            type="datetime-local"
             className="input"
-            placeholder="YYYY-MM-DD HH:MM"
             value={timeValue}
             onChange={(e) => setTimeValue(e.target.value)}
             style={{ flex: 1, minWidth: '220px', fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xs)' }}
           />
-          <button className="btn btn-primary" onClick={handleTimestampLookup} disabled={looking || !timeValue}>
+          <button type="submit" className="btn btn-primary" disabled={looking || !timeValue || !wallet}>
             {looking ? 'SEARCHING...' : 'FIND SNAPSHOT'}
           </button>
-        </div>
+        </form>
 
         {lookupError && (
-          <p style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-sm)', color: 'var(--status-error)' }}>
+          <p role="alert" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-sm)', color: 'var(--status-error)' }}>
             {lookupError}
           </p>
         )}

@@ -19,6 +19,7 @@ import CrossChainTokens from '../components/CrossChainTokens';
 import Markdown from '../components/Markdown';
 import RegistryVerify from '../components/RegistryVerify';
 import { downloadReport } from '../utils/report';
+import { saveRecentInvestigation } from '../utils/storage';
 
 /** Transaction type filter options */
 const TX_FILTERS = [
@@ -96,6 +97,7 @@ export default function Investigate() {
   const [fundTab, setFundTab] = useState('outgoing');
   // Copy address feedback
   const [copied, setCopied] = useState(false);
+  const [visibleTxCount, setVisibleTxCount] = useState(50);
 
   // Start investigation exactly once per address
   useEffect(() => {
@@ -104,6 +106,24 @@ export default function Investigate() {
       investigate(address);
     }
   }, [address, isValid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setActiveSection('overview');
+    setTxTypeFilter('ALL');
+    setTxTimeFilter('all');
+    setExpandedTx(null);
+    setExplainingTx(null);
+    setTxExplanation({});
+    setFundTab('outgoing');
+    setCopied(false);
+    setVisibleTxCount(50);
+  }, [address]);
+
+  const hasCurrentInvestigation = investigation?.wallet?.toLowerCase() === address?.toLowerCase();
+
+  useEffect(() => {
+    if (hasCurrentInvestigation) saveRecentInvestigation(address, investigation.network);
+  }, [address, hasCurrentInvestigation, investigation?.network]);
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
@@ -127,7 +147,7 @@ export default function Investigate() {
   // Build fund flow data from counterparties
   const fundFlow = useMemo(() => {
     if (!investigation) return { incoming: [], outgoing: [] };
-    const { counterparties, transactions } = investigation;
+    const { transactions } = investigation;
     const incoming = [];
     const outgoing = [];
 
@@ -164,11 +184,11 @@ export default function Investigate() {
         entry.count++;
         if (item.timestamp > (entry.lastTx?.timestamp || 0)) entry.lastTx = item;
       }
-      return Array.from(map.values()).sort((a, b) => b.totalValue - a.totalValue).slice(0, 5);
+      return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 5);
     };
 
     return { incoming: aggregate(incoming), outgoing: aggregate(outgoing) };
-  }, [investigation, address]);
+  }, [investigation]);
 
   if (!isValid) {
     return (
@@ -185,7 +205,7 @@ export default function Investigate() {
     );
   }
 
-  if (loading) {
+  if (loading || (!hasCurrentInvestigation && !error)) {
     return (
       <main className="page-investigate container">
         <InvestigationLoader stage={loadingStage} />
@@ -216,7 +236,7 @@ export default function Investigate() {
     );
   }
 
-  if (!investigation) return null;
+  if (!hasCurrentInvestigation) return null;
 
   const { overview, tokens, transactions, counterparties, activityScore, attentionSignals } = investigation;
 
@@ -251,8 +271,8 @@ export default function Investigate() {
     <main className="page-investigate container">
       {/* Target Wallet Header */}
       <div className="investigate-header">
-        <p className="section-title" style={{ justifyContent: 'center' }}>Investigating</p>
-        <p className="investigate-wallet">{shortenAddress(address, 8)}</p>
+        <p className="eyebrow">ACTIVE CASE / BOT CHAIN</p>
+        <h1 className="investigate-wallet">{shortenAddress(address, 8)}</h1>
         <button
           className="mono"
           onClick={handleCopyAddress}
@@ -267,6 +287,7 @@ export default function Investigate() {
             transition: 'color 0.15s ease',
           }}
           title="Copy full address"
+          aria-label="Copy investigated wallet address"
         >
           {copied ? 'COPIED' : address}
         </button>
@@ -284,6 +305,7 @@ export default function Investigate() {
             key={s.id}
             className={`section-nav-btn ${activeSection === s.id ? 'section-nav-active' : ''}`}
             onClick={() => scrollToSection(s.id)}
+            aria-current={activeSection === s.id ? 'location' : undefined}
           >
             {s.label}
           </button>
@@ -317,7 +339,7 @@ export default function Investigate() {
           </div>
           <div className="stat-item">
             <p className="stat-label">Counterparties</p>
-            <p className="stat-value">{formatNumber(overview.contractInteractions)}</p>
+            <p className="stat-value">{formatNumber(counterparties.length)}</p>
           </div>
           <div className="stat-item">
             <p className="stat-label">Wallet Age</p>
@@ -336,6 +358,7 @@ export default function Investigate() {
       <section className="section" aria-label="Activity score" ref={(el) => registerSection('score', el)} data-section="score">
         <h2 className="section-title">Activity Score</h2>
         <div className="card">
+          <p className="metric-note">Measures observed activity, not safety or reputation.</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
             <span
               className="mono activity-score"
@@ -377,7 +400,7 @@ export default function Investigate() {
       <section className="section" aria-label="AI analysis" ref={(el) => registerSection('ai', el)} data-section="ai">
         <h2 className="section-title">AI Analysis</h2>
         <div className="card">
-          <AIProfile investigation={investigation} embedded />
+          <AIProfile key={`profile-${address}`} investigation={investigation} embedded />
           <div
             style={{
               borderTop: '1px solid var(--border-subtle)',
@@ -385,7 +408,7 @@ export default function Investigate() {
               paddingTop: 'var(--space-md)',
             }}
           >
-            <AskWallet investigation={investigation} embedded />
+            <AskWallet key={`chat-${address}`} investigation={investigation} embedded />
           </div>
         </div>
       </section>
@@ -479,7 +502,7 @@ export default function Investigate() {
           <h3 className="card-title" style={{ color: 'var(--orange-bright)', marginBottom: 'var(--space-sm)' }}>
             Cross-Chain
           </h3>
-          <CrossChainTokens address={address} embedded />
+          <CrossChainTokens key={`chains-${address}`} address={address} embedded />
         </div>
       </section>
 
@@ -536,18 +559,16 @@ export default function Investigate() {
           <h2 className="section-title">Fund Flow</h2>
 
           {/* Tabs: outgoing expanded by default */}
-          <div className="fund-tabs" role="tablist" aria-label="Fund flow direction">
+          <div className="fund-tabs" aria-label="Fund flow direction">
             <button
-              role="tab"
-              aria-selected={fundTab === 'incoming'}
+              aria-pressed={fundTab === 'incoming'}
               className={`fund-tab ${fundTab === 'incoming' ? 'fund-tab-in' : ''}`}
               onClick={() => setFundTab('incoming')}
             >
               INCOMING ({fundFlow.incoming.length})
             </button>
             <button
-              role="tab"
-              aria-selected={fundTab === 'outgoing'}
+              aria-pressed={fundTab === 'outgoing'}
               className={`fund-tab ${fundTab === 'outgoing' ? 'fund-tab-out' : ''}`}
               onClick={() => setFundTab('outgoing')}
             >
@@ -618,23 +639,25 @@ export default function Investigate() {
           <>
             {/* Filters */}
             <div className="tx-filters">
-              <div className="tx-filter-group">
+              <div className="tx-filter-group" role="group" aria-label="Transaction type">
                 {TX_FILTERS.map((f) => (
                   <button
                     key={f.key}
                     className={`btn btn-sm ${txTypeFilter === f.key ? 'btn-primary' : 'btn-ghost'}`}
                     onClick={() => setTxTypeFilter(f.key)}
+                    aria-pressed={txTypeFilter === f.key}
                   >
                     {f.label}
                   </button>
                 ))}
               </div>
-              <div className="tx-filter-group">
+              <div className="tx-filter-group" role="group" aria-label="Time range">
                 {TIME_FILTERS.map((f) => (
                   <button
                     key={f.key}
                     className={`btn btn-sm ${txTimeFilter === f.key ? 'btn-primary' : 'btn-ghost'}`}
                     onClick={() => setTxTimeFilter(f.key)}
+                    aria-pressed={txTimeFilter === f.key}
                   >
                     {f.label}
                   </button>
@@ -649,7 +672,7 @@ export default function Investigate() {
                   No transactions match the selected filters.
                 </p>
               ) : (
-                filteredTransactions.slice(0, 50).map((tx) => (
+                filteredTransactions.slice(0, visibleTxCount).map((tx) => (
                   <div key={tx.hash}>
                     {/* Transaction row */}
                     <div
@@ -670,7 +693,7 @@ export default function Investigate() {
                               fontWeight: '600',
                             }}
                           >
-                            {tx.direction === 'incoming' ? 'IN' : 'OUT'}
+                            {tx.direction === 'incoming' ? 'IN' : tx.direction === 'outgoing' ? 'OUT' : 'N/A'}
                           </span>
                           <span className="mono text-muted" style={{ fontSize: 'var(--font-size-xs)' }}>
                             {tx.type?.replace(/_/g, ' ')}
@@ -792,10 +815,13 @@ export default function Investigate() {
                   </div>
                 ))
               )}
-              {filteredTransactions.length > 50 && (
-                <p className="text-muted" style={{ fontSize: 'var(--font-size-xs)', textAlign: 'center', padding: 'var(--space-sm)' }}>
-                  Showing 50 of {filteredTransactions.length} transactions
-                </p>
+              {filteredTransactions.length > visibleTxCount && (
+                <div className="list-more">
+                  <span className="mono text-muted">Showing {visibleTxCount} of {filteredTransactions.length}</span>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setVisibleTxCount((count) => count + 50)}>
+                    SHOW 50 MORE
+                  </button>
+                </div>
               )}
             </div>
           </>
@@ -804,7 +830,7 @@ export default function Investigate() {
 
       {/* On-Chain Registry */}
       <div ref={(el) => registerSection('registry', el)} data-section="registry">
-        <RegistryVerify investigation={investigation} />
+        <RegistryVerify key={`registry-${address}`} investigation={investigation} />
       </div>
     </main>
   );

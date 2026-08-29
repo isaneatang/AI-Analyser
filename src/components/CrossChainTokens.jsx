@@ -36,7 +36,12 @@ export default function CrossChainTokens({ address, embedded = false }) {
   const [rateLimited, setRateLimited] = useState(false);
 
   useEffect(() => {
-    if (!address || fetched) return;
+    if (!address) return;
+    const controller = new AbortController();
+    setFetched(false);
+    setChains([]);
+    setActiveChain(null);
+    setRateLimited(false);
 
     async function fetchCrossChain() {
       setLoading(true);
@@ -44,7 +49,7 @@ export default function CrossChainTokens({ address, embedded = false }) {
 
       try {
         const res = await fetch(`/api/crosschain/${address}`, {
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
         });
         const data = await res.json();
 
@@ -59,6 +64,7 @@ export default function CrossChainTokens({ address, embedded = false }) {
           setActiveChain((prev) => prev || (list.find((c) => c.tokens.length > 0) || list[0] || null)?.chain || null);
         }
       } catch (err) {
+        if (err.name === 'AbortError') return;
         const msg = err.message || '';
         if (msg.includes('429') || msg.includes('rate') || msg.includes('limit')) {
           setRateLimited(true);
@@ -73,7 +79,8 @@ export default function CrossChainTokens({ address, embedded = false }) {
     }
 
     fetchCrossChain();
-  }, [address, fetched]);
+    return () => controller.abort();
+  }, [address]);
 
   // Don't show anything if not fetched yet or loading with no data
   if (!fetched && !loading) return null;
@@ -113,15 +120,14 @@ export default function CrossChainTokens({ address, embedded = false }) {
       {chains.length > 0 && (
         <>
           {/* Chain picker chips */}
-          <div className="crosschain-chips" role="tablist" aria-label="Chain picker">
+          <div className="crosschain-chips" aria-label="Chain picker">
             {chains.map((chain) => {
               const color = getChainColor(chain.chain);
               const isActive = chain.chain === activeChain;
               return (
                 <button
                   key={chain.chain}
-                  role="tab"
-                  aria-selected={isActive}
+                  aria-pressed={isActive}
                   className={`crosschain-chip ${isActive ? 'crosschain-chip-active' : ''}`}
                   onClick={() => setActiveChain(chain.chain)}
                   style={{ borderColor: isActive ? color : 'var(--border-subtle)', color }}

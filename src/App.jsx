@@ -3,7 +3,7 @@
  * Sets up routing, wallet providers, investigation provider, and shared layout.
  */
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { WalletProvider, WalletProviderMock } from './context/WalletContext';
@@ -36,9 +36,9 @@ export default function App() {
               <div className="empty-state">
                 <div className="empty-state-icon" aria-hidden="true">404</div>
                 <p className="empty-state-text">Page not found</p>
-                <a href="/" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
+                <Link to="/" className="btn btn-primary" style={{ marginTop: 'var(--space-lg)' }}>
                   Back to Home
-                </a>
+                </Link>
               </div>
             </main>
           }
@@ -50,7 +50,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       {isReownConfigured && wagmiAdapter ? (
-        <WagmiProvider config={wagmiAdapter.wagmiConfig} reconnectOnMount={false}>
+        <WagmiProvider config={wagmiAdapter.wagmiConfig} reconnectOnMount>
           <WalletProvider>
             {content}
           </WalletProvider>

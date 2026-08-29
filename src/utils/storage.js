@@ -14,7 +14,9 @@ const MAX_RECENT = 20;
 export function getRecentInvestigations() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const parsed = data ? JSON.parse(data) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item.address === 'string' && item.timestamp);
   } catch {
     return [];
   }
